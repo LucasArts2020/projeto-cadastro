@@ -1,23 +1,54 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent } from "electron";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import fs from "node:fs";
+
+interface Student {
+  id?: number;
+  nome: string;
+  rg: string;
+  cpf: string;
+  dataNascimento: string;
+  telefone: string;
+  telefoneEmergencia: string;
+  endereco: string;
+  foto: string | null;
+  turma: string;
+  valorMatricula: number;
+  planoMensal: string;
+  valorMensalidade: number;
+  formaPagamento: string;
+  diaVencimento: number;
+  createdAt?: string;
+}
+
+type SqlValue = number | string | Uint8Array | null;
+
+interface QueryExecResult {
+  columns: string[];
+  values: SqlValue[][];
+}
+
+interface SqlStatement {
+  run(params?: Record<string, SqlValue> | SqlValue[]): void;
+  free(): void;
+}
+
+interface Database {
+  run(sql: string, params?: Record<string, SqlValue> | SqlValue[]): Database;
+  exec(sql: string): QueryExecResult[];
+  prepare(sql: string): SqlStatement;
+  export(): Uint8Array;
+}
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// The built directory structure
-//
-// ├─┬─┬ dist
-// │ │ └── index.html
-// │ │
-// │ ├─┬ dist-electron
-// │ │ ├── main.js
-// │ │ └── preload.mjs
-// │
+const initSqlJs = require("sql.js");
+
 process.env.APP_ROOT = path.join(__dirname, "..");
 
-// 🚧 Use ['ENV_NAME'] avoid vite:define plugin - Vite@2.x
 export const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 export const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
@@ -25,6 +56,70 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
   ? path.join(process.env.APP_ROOT, "public")
   : RENDERER_DIST;
+
+let db: Database | null = null;
+const dbPath = path.join(process.env.APP_ROOT, "dados.sqlite");
+
+async function iniciarBanco(): Promise<void> {
+  try {
+    const wasmPath = path.join(
+      process.env.APP_ROOT,
+      "node_modules",
+      "sql.js",
+      "dist",
+      "sql-wasm.wasm",
+    );
+
+    const wasmBuffer = fs.readFileSync(wasmPath);
+
+    const SQL = await initSqlJs({
+      wasmBinary: wasmBuffer,
+    });
+
+    if (fs.existsSync(dbPath)) {
+      const fileBuffer = fs.readFileSync(dbPath);
+      db = new SQL.Database(fileBuffer) as Database;
+      console.log("Banco de dados carregado com sucesso.");
+    } else {
+      db = new SQL.Database() as Database;
+      db?.run(`
+        CREATE TABLE IF NOT EXISTS students (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nome TEXT NOT NULL,
+          rg TEXT NOT NULL,
+          cpf TEXT UNIQUE NOT NULL,
+          dataNascimento TEXT NOT NULL,
+          telefone TEXT NOT NULL,
+          telefoneEmergencia TEXT NOT NULL,
+          endereco TEXT NOT NULL,
+          foto TEXT,
+          turma TEXT NOT NULL,
+          valorMatricula REAL NOT NULL,
+          planoMensal TEXT NOT NULL,
+          valorMensalidade REAL NOT NULL,
+          formaPagamento TEXT NOT NULL,
+          diaVencimento INTEGER NOT NULL,
+          createdAt TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      salvarBanco();
+      console.log("Novo banco de dados criado.");
+    }
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      console.error("ERRO CRÍTICO NO BANCO:", err.message);
+    } else {
+      console.error("ERRO DESCONHECIDO NO BANCO:", err);
+    }
+  }
+}
+
+function salvarBanco(): void {
+  if (!db) return;
+  const data = db.export();
+  const buffer = Buffer.from(data);
+  fs.writeFileSync(dbPath, buffer);
+}
 
 let win: BrowserWindow | null;
 
@@ -36,7 +131,6 @@ function createWindow() {
     },
   });
 
-  // Test active push message to Renderer-process.
   win.webContents.on("did-finish-load", () => {
     win?.webContents.send("main-process-message", new Date().toLocaleString());
   });
@@ -44,14 +138,10 @@ function createWindow() {
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL);
   } else {
-    // win.loadFile('dist/index.html')
     win.loadFile(path.join(RENDERER_DIST, "index.html"));
   }
 }
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
@@ -59,12 +149,96 @@ app.on("window-all-closed", () => {
   }
 });
 
-app.on("activate", () => {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
+app.whenReady().then(async () => {
+  await iniciarBanco();
+  createWindow();
+});
+
+interface ApiResponse<T = void> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+ipcMain.handle("get-alunos", (): Student[] => {
+  try {
+    if (!db) return [];
+
+    const result = db.exec("SELECT * FROM students ORDER BY id DESC");
+
+    if (result.length === 0) return [];
+
+    const columns = result[0].columns;
+    const values = result[0].values;
+
+    const alunos: Student[] = values.map((row) => {
+      const obj: Record<string, SqlValue> = {};
+
+      columns.forEach((col, i) => {
+        obj[col] = row[i];
+      });
+
+      return obj as unknown as Student;
+    });
+
+    return alunos;
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Erro ao buscar:", error.message);
+    }
+    return [];
   }
 });
 
-app.whenReady().then(createWindow);
+ipcMain.handle(
+  "add-aluno",
+  (event: IpcMainInvokeEvent, dados: Student): ApiResponse => {
+    try {
+      if (!db) return { success: false, error: "Banco não iniciado" };
+
+      const stmt = db.prepare(`
+      INSERT INTO students (
+        nome, rg, cpf, dataNascimento, telefone, telefoneEmergencia, 
+        endereco, foto, turma, valorMatricula, planoMensal, 
+        valorMensalidade, formaPagamento, diaVencimento
+      ) VALUES (
+        $nome, $rg, $cpf, $dataNascimento, $telefone, $telefoneEmergencia, 
+        $endereco, $foto, $turma, $valorMatricula, $planoMensal, 
+        $valorMensalidade, $formaPagamento, $diaVencimento
+      )
+    `);
+
+      // Tipagem explícita dos parâmetros
+      const params: Record<string, SqlValue> = {
+        $nome: dados.nome,
+        $rg: dados.rg,
+        $cpf: dados.cpf,
+        $dataNascimento: dados.dataNascimento,
+        $telefone: dados.telefone,
+        $telefoneEmergencia: dados.telefoneEmergencia,
+        $endereco: dados.endereco,
+        $foto: dados.foto || null,
+        $turma: dados.turma,
+        $valorMatricula: dados.valorMatricula,
+        $planoMensal: dados.planoMensal,
+        $valorMensalidade: dados.valorMensalidade,
+        $formaPagamento: dados.formaPagamento,
+        $diaVencimento: dados.diaVencimento,
+      };
+
+      stmt.run(params);
+      stmt.free();
+
+      salvarBanco();
+
+      return { success: true };
+    } catch (error: unknown) {
+      let errorMessage = "Erro desconhecido";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        console.error("Erro ao inserir:", errorMessage);
+      }
+      return { success: false, error: errorMessage };
+    }
+  },
+);
