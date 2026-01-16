@@ -1,286 +1,154 @@
 import { useState, useEffect } from "react";
+import TelaCadastro from "./pages/TelaCadastro";
+import { CadastroService } from "./services/CadastroService";
+import { Cadastro } from "./types/typeCadastro";
 
-// Tipo igual ao do Banco de Dados
-interface Student {
-  id: number;
-  nome: string;
-  rg: string;
-  cpf: string;
-  dataNascimento: string;
-  telefone: string;
-  telefoneEmergencia: string;
-  endereco: string;
-  turma: string;
-  valorMatricula: number;
-  planoMensal: string;
-  valorMensalidade: number;
-  formaPagamento: string;
-  diaVencimento: number;
-}
-
-// Tipo da resposta ao salvar (para o TypeScript não reclamar)
-interface SaveResponse {
-  success: boolean;
-  error?: string;
-}
+// Ícones simples usando texto/emoji ou svg (opcional) para dar um charme
+const RefreshIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="16"
+    height="16"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth={2}
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+    />
+  </svg>
+);
 
 function App() {
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<Cadastro[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Estado do formulário
-  const [formData, setFormData] = useState({
-    nome: "",
-    rg: "",
-    cpf: "",
-    dataNascimento: "",
-    telefone: "",
-    telefoneEmergencia: "",
-    endereco: "",
-    turma: "",
-    valorMatricula: "",
-    planoMensal: "",
-    valorMensalidade: "",
-    formaPagamento: "",
-    diaVencimento: "",
-  });
-
-  // Carrega os alunos assim que a tela abre
   useEffect(() => {
     loadStudents();
   }, []);
 
   const loadStudents = async () => {
+    setLoading(true);
     try {
-      console.log("Buscando alunos...");
-      // AQUI: Adicionamos <Student[]> para dizer que volta uma lista de alunos
-      const list = await window.ipcRenderer.invoke<Student[]>("get-alunos");
+      const list = await CadastroService.list();
       setStudents(list);
     } catch (error) {
       console.error("Erro ao buscar alunos:", error);
-    }
-  };
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // AQUI: Adicionamos <SaveResponse> para saber que volta { success: boolean }
-    const result = await window.ipcRenderer.invoke<SaveResponse>(
-      "add-aluno",
-      formData,
-    );
-
-    if (result.success) {
-      alert("Aluno cadastrado com sucesso!");
-      loadStudents(); // Atualiza a lista na hora
-
-      // Limpa o formulário
-      setFormData({
-        nome: "",
-        rg: "",
-        cpf: "",
-        dataNascimento: "",
-        telefone: "",
-        telefoneEmergencia: "",
-        endereco: "",
-        turma: "",
-        valorMatricula: "",
-        planoMensal: "",
-        valorMensalidade: "",
-        formaPagamento: "",
-        diaVencimento: "",
-      });
-    } else {
-      alert("Erro ao cadastrar: " + result.error);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-blue-800 mb-8">
-          Sistema de Cadastro
-        </h1>
-
-        {/* --- FORMULÁRIO --- */}
-        <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">
-            Novo Aluno
-          </h2>
-          <form
-            onSubmit={handleSubmit}
-            className="grid grid-cols-1 md:grid-cols-3 gap-4"
-          >
-            <input
-              name="nome"
-              placeholder="Nome Completo"
-              value={formData.nome}
-              onChange={handleChange}
-              className="border p-2 rounded"
-              required
-            />
-            <input
-              name="rg"
-              placeholder="RG"
-              value={formData.rg}
-              onChange={handleChange}
-              className="border p-2 rounded"
-              required
-            />
-            <input
-              name="cpf"
-              placeholder="CPF"
-              value={formData.cpf}
-              onChange={handleChange}
-              className="border p-2 rounded"
-              required
-            />
-            <input
-              name="dataNascimento"
-              type="date"
-              value={formData.dataNascimento}
-              onChange={handleChange}
-              className="border p-2 rounded"
-              required
-            />
-            <input
-              name="telefone"
-              placeholder="Telefone"
-              value={formData.telefone}
-              onChange={handleChange}
-              className="border p-2 rounded"
-              required
-            />
-            <input
-              name="telefoneEmergencia"
-              placeholder="Tel. Emergência"
-              value={formData.telefoneEmergencia}
-              onChange={handleChange}
-              className="border p-2 rounded"
-              required
-            />
-            <input
-              name="endereco"
-              placeholder="Endereço"
-              value={formData.endereco}
-              onChange={handleChange}
-              className="border p-2 rounded col-span-1 md:col-span-3"
-              required
-            />
-
-            <input
-              name="turma"
-              placeholder="Turma"
-              value={formData.turma}
-              onChange={handleChange}
-              className="border p-2 rounded"
-              required
-            />
-            <input
-              name="valorMatricula"
-              type="number"
-              step="0.01"
-              placeholder="Valor Matrícula (R$)"
-              value={formData.valorMatricula}
-              onChange={handleChange}
-              className="border p-2 rounded"
-              required
-            />
-            <input
-              name="planoMensal"
-              placeholder="Plano Mensal"
-              value={formData.planoMensal}
-              onChange={handleChange}
-              className="border p-2 rounded"
-              required
-            />
-            <input
-              name="valorMensalidade"
-              type="number"
-              step="0.01"
-              placeholder="Valor Mensalidade (R$)"
-              value={formData.valorMensalidade}
-              onChange={handleChange}
-              className="border p-2 rounded"
-              required
-            />
-
-            <select
-              name="formaPagamento"
-              value={formData.formaPagamento}
-              onChange={handleChange}
-              className="border p-2 rounded"
-              required
-            >
-              <option value="">Forma de Pagamento</option>
-              <option value="Boleto">Boleto</option>
-              <option value="Cartão">Cartão</option>
-              <option value="PIX">PIX</option>
-              <option value="Dinheiro">Dinheiro</option>
-            </select>
-
-            <input
-              name="diaVencimento"
-              type="number"
-              placeholder="Dia Vencimento"
-              value={formData.diaVencimento}
-              onChange={handleChange}
-              className="border p-2 rounded"
-              required
-            />
-
-            <button
-              type="submit"
-              className="col-span-1 md:col-span-3 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 font-bold transition cursor-pointer"
-            >
-              Salvar Aluno
-            </button>
-          </form>
+    <div className="min-h-screen bg-gray-100 py-10 px-4 md:px-10 font-sans">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* CABEÇALHO */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800 tracking-tight">
+              Painel Escolar
+            </h1>
+            <p className="text-gray-500">Gerencie alunos e matrículas</p>
+          </div>
+          <div className="text-sm bg-blue-100 text-blue-800 py-1 px-3 rounded-full font-medium">
+            Versão 1.0
+          </div>
         </div>
 
-        {/* --- LISTAGEM --- */}
-        <div className="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">
-            Alunos Cadastrados ({students.length})
-          </h2>
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-100 border-b">
-                <th className="p-3">ID</th>
-                <th className="p-3">Nome</th>
-                <th className="p-3">CPF</th>
-                <th className="p-3">Turma</th>
-                <th className="p-3">Mensalidade</th>
-                <th className="p-3">Vencimento</th>
-              </tr>
-            </thead>
-            <tbody>
-              {students.map((student) => (
-                <tr key={student.id} className="border-b hover:bg-gray-50">
-                  <td className="p-3 text-gray-500">#{student.id}</td>
-                  <td className="p-3 font-medium">{student.nome}</td>
-                  <td className="p-3">{student.cpf}</td>
-                  <td className="p-3">{student.turma}</td>
-                  <td className="p-3">
-                    R$ {Number(student.valorMensalidade).toFixed(2)}
-                  </td>
-                  <td className="p-3">Dia {student.diaVencimento}</td>
+        {/* ÁREA DE CADASTRO (Seu componente) */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-700">
+              Novo Cadastro
+            </h2>
+          </div>
+          {/* Passamos o loadStudents para atualizar a tabela após salvar */}
+          <TelaCadastro onSuccess={loadStudents} />
+        </div>
+
+        {/* ÁREA DE LISTAGEM (Tabela Estilizada) */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-gray-700">
+              Alunos Cadastrados{" "}
+              <span className="text-gray-400 text-sm font-normal">
+                ({students.length})
+              </span>
+            </h2>
+            <button
+              onClick={loadStudents}
+              className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+              title="Atualizar lista"
+            >
+              <RefreshIcon />
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50 text-gray-600 text-sm uppercase tracking-wider">
+                  <th className="p-4 font-semibold border-b">Nome</th>
+                  <th className="p-4 font-semibold border-b">CPF</th>
+                  <th className="p-4 font-semibold border-b">Turma</th>
+                  <th className="p-4 font-semibold border-b">Plano</th>
+                  <th className="p-4 font-semibold border-b text-right">
+                    Mensalidade
+                  </th>
+                  <th className="p-4 font-semibold border-b text-center">
+                    Vencimento
+                  </th>
                 </tr>
-              ))}
-              {students.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="p-4 text-center text-gray-500">
-                    Nenhum aluno cadastrado.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="text-gray-700 text-sm">
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-gray-500">
+                      Carregando dados...
+                    </td>
+                  </tr>
+                ) : students.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="p-8 text-center text-gray-400 italic"
+                    >
+                      Nenhum aluno cadastrado ainda. Use o formulário acima.
+                    </td>
+                  </tr>
+                ) : (
+                  students.map((student, index) => (
+                    <tr
+                      key={index}
+                      className="border-b last:border-0 hover:bg-blue-50/50 transition-colors"
+                    >
+                      <td className="p-4 font-medium text-gray-900">
+                        {student.nome}
+                      </td>
+                      <td className="p-4">{student.cpf}</td>
+                      <td className="p-4">
+                        <span className="px-2 py-1 bg-gray-100 rounded text-xs font-semibold text-gray-600">
+                          {student.turma}
+                        </span>
+                      </td>
+                      <td className="p-4">{student.planoMensal}</td>
+                      <td className="p-4 text-right font-medium text-green-600">
+                        R$ {Number(student.valorMensalidade || 0).toFixed(2)}
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className="bg-blue-100 text-blue-700 py-1 px-2 rounded text-xs font-bold">
+                          Dia {student.diaVencimento}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
