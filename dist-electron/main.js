@@ -10,9 +10,7 @@ process.env.APP_ROOT = path.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
 const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
-  ? path.join(process.env.APP_ROOT, "public")
-  : RENDERER_DIST;
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
 let db = null;
 const dbPath = path.join(process.env.APP_ROOT, "dados.sqlite");
 async function iniciarBanco() {
@@ -22,11 +20,11 @@ async function iniciarBanco() {
       "node_modules",
       "sql.js",
       "dist",
-      "sql-wasm.wasm",
+      "sql-wasm.wasm"
     );
     const wasmBuffer = fs.readFileSync(wasmPath);
     const SQL = await initSqlJs({
-      wasmBinary: wasmBuffer,
+      wasmBinary: wasmBuffer
     });
     if (fs.existsSync(dbPath)) {
       const fileBuffer = fs.readFileSync(dbPath);
@@ -78,14 +76,11 @@ function createWindow() {
     height: 1e3,
     icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
-      preload: path.join(__dirname$1, "preload.mjs"),
-    },
+      preload: path.join(__dirname$1, "preload.mjs")
+    }
   });
   win.webContents.on("did-finish-load", () => {
-    win?.webContents.send(
-      "main-process-message",
-      /* @__PURE__ */ new Date().toLocaleString(),
-    );
+    win?.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
   });
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL);
@@ -118,7 +113,7 @@ ipcMain.handle("get-alunos", () => {
       return {
         ...obj,
         telefone2: obj.telefoneEmergencia,
-        fotoUrl: obj.foto,
+        fotoUrl: obj.foto
       };
     });
     return alunos;
@@ -129,11 +124,13 @@ ipcMain.handle("get-alunos", () => {
     return [];
   }
 });
-ipcMain.handle("add-aluno", (event, dados) => {
-  try {
-    if (!db) return { success: false, error: "Banco não iniciado" };
-    const diaVencimentoSafe = parseInt(String(dados.diaVencimento || 0));
-    const stmt = db.prepare(`
+ipcMain.handle(
+  "add-aluno",
+  (event, dados) => {
+    try {
+      if (!db) return { success: false, error: "Banco não iniciado" };
+      const diaVencimentoSafe = parseInt(String(dados.diaVencimento || 0));
+      const stmt = db.prepare(`
       INSERT INTO students (
         nome, rg, cpf, dataNascimento, telefone, telefoneEmergencia, 
         endereco, foto, turma, valorMatricula, planoMensal, 
@@ -144,42 +141,47 @@ ipcMain.handle("add-aluno", (event, dados) => {
         $valorMensalidade, $formaPagamento, $diaVencimento
       )
     `);
-    const params = {
-      $nome: dados.nome,
-      $rg: dados.rg,
-      $cpf: dados.cpf,
-      $dataNascimento: dados.dataNascimento,
-      $telefone: dados.telefone,
-      // Mapeia 'telefone2' (front) para 'telefoneEmergencia' (banco)
-      // Se vier vazio, manda string vazia "" para não quebrar o NOT NULL
-      $telefoneEmergencia: dados.telefone2 || "",
-      $endereco: dados.endereco,
-      // Mapeia 'fotoUrl' (front) para 'foto' (banco)
-      $foto: dados.fotoUrl || null,
-      $turma: dados.turma,
-      $valorMatricula: dados.valorMatricula,
-      $planoMensal: dados.planoMensal,
-      $valorMensalidade: dados.valorMensalidade,
-      $formaPagamento: dados.formaPagamento,
-      $diaVencimento: diaVencimentoSafe,
-    };
-    stmt.run(params);
-    stmt.free();
-    salvarBanco();
-    return { success: true };
-  } catch (error) {
-    let errorMessage = "Erro desconhecido";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-      console.error("Erro ao inserir:", errorMessage);
-      if (errorMessage.includes("NOT NULL constraint failed")) {
-        return {
-          success: false,
-          error: "Preencha todos os campos obrigatórios.",
-        };
+      const params = {
+        $nome: dados.nome,
+        $rg: dados.rg,
+        $cpf: dados.cpf,
+        $dataNascimento: dados.dataNascimento,
+        $telefone: dados.telefone,
+        // Mapeia 'telefone2' (front) para 'telefoneEmergencia' (banco)
+        // Se vier vazio, manda string vazia "" para não quebrar o NOT NULL
+        $telefoneEmergencia: dados.telefone2 || "",
+        $endereco: dados.endereco,
+        // Mapeia 'fotoUrl' (front) para 'foto' (banco)
+        $foto: dados.fotoUrl || null,
+        $turma: dados.turma,
+        $valorMatricula: dados.valorMatricula,
+        $planoMensal: dados.planoMensal,
+        $valorMensalidade: dados.valorMensalidade,
+        $formaPagamento: dados.formaPagamento,
+        $diaVencimento: diaVencimentoSafe
+      };
+      stmt.run(params);
+      stmt.free();
+      salvarBanco();
+      return { success: true };
+    } catch (error) {
+      let errorMessage = "Erro desconhecido";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        console.error("Erro ao inserir:", errorMessage);
+        if (errorMessage.includes("NOT NULL constraint failed")) {
+          return {
+            success: false,
+            error: "Preencha todos os campos obrigatórios."
+          };
+        }
       }
+      return { success: false, error: errorMessage };
     }
-    return { success: false, error: errorMessage };
   }
-});
-export { MAIN_DIST, RENDERER_DIST, VITE_DEV_SERVER_URL };
+);
+export {
+  MAIN_DIST,
+  RENDERER_DIST,
+  VITE_DEV_SERVER_URL
+};
