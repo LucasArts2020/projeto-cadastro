@@ -7,7 +7,6 @@ interface Props {
 }
 
 export default function StudentTable({ students, loading }: Props) {
-  // Helpers internos para formatação visual
   const getInitials = (name: string) => {
     const parts = name.trim().split(" ");
     if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
@@ -68,7 +67,7 @@ export default function StudentTable({ students, loading }: Props) {
                 >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-indigo-500/20">
+                      <div className="w-10 h-10 rounded-full bg-linear-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-indigo-500/20">
                         {getInitials(student.nome)}
                       </div>
                       <div>

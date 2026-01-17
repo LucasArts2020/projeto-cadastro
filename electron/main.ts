@@ -68,7 +68,7 @@ async function iniciarBanco(): Promise<void> {
       "node_modules",
       "sql.js",
       "dist",
-      "sql-wasm.wasm"
+      "sql-wasm.wasm",
     );
 
     const wasmBuffer = fs.readFileSync(wasmPath);
@@ -87,7 +87,7 @@ async function iniciarBanco(): Promise<void> {
         CREATE TABLE IF NOT EXISTS students (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           nome TEXT NOT NULL,
-          rg TEXT NOT NULL,
+          rg TEXT,
           cpf TEXT UNIQUE NOT NULL,
           dataNascimento TEXT NOT NULL,
           telefone TEXT NOT NULL,
@@ -267,5 +267,5 @@ ipcMain.handle(
       }
       return { success: false, error: errorMessage };
     }
-  }
+  },
 );

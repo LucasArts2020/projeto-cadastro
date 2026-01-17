@@ -36,7 +36,7 @@ async function iniciarBanco() {
         CREATE TABLE IF NOT EXISTS students (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           nome TEXT NOT NULL,
-          rg TEXT NOT NULL,
+          rg TEXT,
           cpf TEXT UNIQUE NOT NULL,
           dataNascimento TEXT NOT NULL,
           telefone TEXT NOT NULL,

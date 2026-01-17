@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Cadastro } from "../types/typeCadastro";
 import { CadastroService } from "../services/CadastroService";
+import Popup from "../components/layout/popup";
 
-// Novos Componentes
 import Stepper from "../components/common/Stepper";
 import StepPersonalData from "../components/cadastro/StepPersonalData";
 import StepFinancialData from "../components/cadastro/StepFinancialData";
@@ -15,6 +15,7 @@ interface Props {
 export default function TelaCadastro({ onSuccess }: Props) {
   const [etapa, setEtapa] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
 
   const [cadastroDados, setCadastroDados] = useState<Cadastro>({
     nome: "",
@@ -39,7 +40,7 @@ export default function TelaCadastro({ onSuccess }: Props) {
 
   const proximaEtapa = () => {
     if (!cadastroDados.nome || !cadastroDados.cpf) {
-      alert("⚠️ Preencha Nome e CPF para continuar.");
+      setShowPopup(true);
       return;
     }
     setEtapa(2);
@@ -57,7 +58,7 @@ export default function TelaCadastro({ onSuccess }: Props) {
       await CadastroService.create(cadastroDados);
       setTimeout(() => {
         alert("✅ Aluno matriculado com sucesso!");
-        // Reset
+
         setCadastroDados({
           nome: "",
           rg: "",
@@ -79,18 +80,16 @@ export default function TelaCadastro({ onSuccess }: Props) {
         if (onSuccess) onSuccess();
       }, 500);
     } catch (error) {
-      console.error(error);
-      alert("❌ Erro ao salvar cadastro.");
+      setShowPopup(true);
+    } finally {
       setIsLoading(false);
     }
   }
 
   return (
     <div className="flex flex-col h-full">
-      {/* 1. Indicador de Progresso */}
       <Stepper currentStep={etapa} />
 
-      {/* 2. Conteúdo do Formulário (Renderização Condicional) */}
       <div className="p-8 bg-white min-h-[400px]">
         {etapa === 1 ? (
           <StepPersonalData data={cadastroDados} onChange={handleChange} />
@@ -98,8 +97,14 @@ export default function TelaCadastro({ onSuccess }: Props) {
           <StepFinancialData data={cadastroDados} onChange={handleChange} />
         )}
       </div>
+      <div>
+        {showPopup && (
+          <Popup onClose={() => setShowPopup(false)}>
+            <h2 className="text-lg font-semibold mb-2">Erro</h2>
+          </Popup>
+        )}
+      </div>
 
-      {/* 3. Botões de Ação */}
       <FormActions
         step={etapa}
         isLoading={isLoading}
