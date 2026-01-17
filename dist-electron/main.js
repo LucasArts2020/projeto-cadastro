@@ -108,7 +108,11 @@ ipcMain.handle("get-alunos", () => {
       columns.forEach((col, i) => {
         obj[col] = row[i];
       });
-      return obj;
+      return {
+        ...obj,
+        telefone2: obj.telefoneEmergencia,
+        fotoUrl: obj.foto
+      };
     });
     return alunos;
   } catch (error) {
@@ -123,6 +127,7 @@ ipcMain.handle(
   (event, dados) => {
     try {
       if (!db) return { success: false, error: "Banco não iniciado" };
+      const diaVencimentoSafe = parseInt(String(dados.diaVencimento || 0));
       const stmt = db.prepare(`
       INSERT INTO students (
         nome, rg, cpf, dataNascimento, telefone, telefoneEmergencia, 
@@ -140,15 +145,18 @@ ipcMain.handle(
         $cpf: dados.cpf,
         $dataNascimento: dados.dataNascimento,
         $telefone: dados.telefone,
-        $telefoneEmergencia: dados.telefoneEmergencia,
+        // Mapeia 'telefone2' (front) para 'telefoneEmergencia' (banco)
+        // Se vier vazio, manda string vazia "" para não quebrar o NOT NULL
+        $telefoneEmergencia: dados.telefone2 || "",
         $endereco: dados.endereco,
-        $foto: dados.foto || null,
+        // Mapeia 'fotoUrl' (front) para 'foto' (banco)
+        $foto: dados.fotoUrl || null,
         $turma: dados.turma,
         $valorMatricula: dados.valorMatricula,
         $planoMensal: dados.planoMensal,
         $valorMensalidade: dados.valorMensalidade,
         $formaPagamento: dados.formaPagamento,
-        $diaVencimento: dados.diaVencimento
+        $diaVencimento: diaVencimentoSafe
       };
       stmt.run(params);
       stmt.free();
@@ -159,6 +167,12 @@ ipcMain.handle(
       if (error instanceof Error) {
         errorMessage = error.message;
         console.error("Erro ao inserir:", errorMessage);
+        if (errorMessage.includes("NOT NULL constraint failed")) {
+          return {
+            success: false,
+            error: "Preencha todos os campos obrigatórios."
+          };
+        }
       }
       return { success: false, error: errorMessage };
     }

@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
 
+// --- 1. AJUSTE NA INTERFACE PARA BATER COM O FRONT-END ---
 interface Student {
   id?: number;
   nome: string;
@@ -11,15 +12,15 @@ interface Student {
   cpf: string;
   dataNascimento: string;
   telefone: string;
-  telefoneEmergencia: string;
+  telefone2?: string; // Alterado de telefoneEmergencia para telefone2
   endereco: string;
-  foto: string | null;
+  fotoUrl?: string | null; // Alterado de foto para fotoUrl
   turma: string;
   valorMatricula: number;
   planoMensal: string;
   valorMensalidade: number;
   formaPagamento: string;
-  diaVencimento: number;
+  diaVencimento: number | string; // Aceita string caso venha do input
   createdAt?: string;
 }
 
@@ -172,13 +173,19 @@ ipcMain.handle("get-alunos", (): Student[] => {
     const values = result[0].values;
 
     const alunos: Student[] = values.map((row) => {
-      const obj: Record<string, SqlValue> = {};
+      const obj: any = {};
 
       columns.forEach((col, i) => {
         obj[col] = row[i];
       });
 
-      return obj as unknown as Student;
+      // Conversão na volta (banco -> front)
+      // Ajusta o nome das chaves para o front entender
+      return {
+        ...obj,
+        telefone2: obj.telefoneEmergencia,
+        fotoUrl: obj.foto,
+      } as Student;
     });
 
     return alunos;
@@ -196,6 +203,9 @@ ipcMain.handle(
     try {
       if (!db) return { success: false, error: "Banco não iniciado" };
 
+      // Validação básica para evitar erro de NaN
+      const diaVencimentoSafe = parseInt(String(dados.diaVencimento || 0));
+
       const stmt = db.prepare(`
       INSERT INTO students (
         nome, rg, cpf, dataNascimento, telefone, telefoneEmergencia, 
@@ -208,22 +218,29 @@ ipcMain.handle(
       )
     `);
 
-      // Tipagem explícita dos parâmetros
+      // --- 2. CORREÇÃO CRÍTICA AQUI ---
       const params: Record<string, SqlValue> = {
         $nome: dados.nome,
         $rg: dados.rg,
         $cpf: dados.cpf,
         $dataNascimento: dados.dataNascimento,
         $telefone: dados.telefone,
-        $telefoneEmergencia: dados.telefoneEmergencia,
+
+        // Mapeia 'telefone2' (front) para 'telefoneEmergencia' (banco)
+        // Se vier vazio, manda string vazia "" para não quebrar o NOT NULL
+        $telefoneEmergencia: dados.telefone2 || "",
+
         $endereco: dados.endereco,
-        $foto: dados.foto || null,
+
+        // Mapeia 'fotoUrl' (front) para 'foto' (banco)
+        $foto: dados.fotoUrl || null,
+
         $turma: dados.turma,
         $valorMatricula: dados.valorMatricula,
         $planoMensal: dados.planoMensal,
         $valorMensalidade: dados.valorMensalidade,
         $formaPagamento: dados.formaPagamento,
-        $diaVencimento: dados.diaVencimento,
+        $diaVencimento: diaVencimentoSafe,
       };
 
       stmt.run(params);
@@ -237,6 +254,14 @@ ipcMain.handle(
       if (error instanceof Error) {
         errorMessage = error.message;
         console.error("Erro ao inserir:", errorMessage);
+
+        // Dica extra para debugar se der erro de constraint
+        if (errorMessage.includes("NOT NULL constraint failed")) {
+          return {
+            success: false,
+            error: "Preencha todos os campos obrigatórios.",
+          };
+        }
       }
       return { success: false, error: errorMessage };
     }

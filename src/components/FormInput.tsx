@@ -62,11 +62,8 @@ export default function FormInput<T>({
     onChange(name, e.target.value as T[keyof T]);
   }
 
-  // Evita erro de "uncontrolled component" transformando null/undefined em string vazia
-  // Exceto para 'file', que deve ser undefined mesmo
   const safeValue = type === "file" ? undefined : ((value as any) ?? "");
 
-  // Estilo padrão bonito (Tailwind)
   const inputStyle =
     "border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all w-full bg-white text-gray-700";
 

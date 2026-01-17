@@ -1,158 +1,197 @@
-import { useState, useEffect } from "react";
+import {
+  HashRouter,
+  Routes,
+  Route,
+  NavLink,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import TelaCadastro from "./pages/TelaCadastro";
-import { CadastroService } from "./services/CadastroService";
-import { Cadastro } from "./types/typeCadastro";
+import TelaListagem from "./pages/TelaListagem";
 
-// Ícones simples usando texto/emoji ou svg (opcional) para dar um charme
-const RefreshIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="16"
-    height="16"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={2}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-    />
-  </svg>
-);
+// Ícones
+const Icons = {
+  Dashboard: () => (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+      />
+    </svg>
+  ),
+  Users: () => (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+      />
+    </svg>
+  ),
+  AddUser: () => (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+      />
+    </svg>
+  ),
+};
 
-function App() {
-  const [students, setStudents] = useState<Cadastro[]>([]);
-  const [loading, setLoading] = useState(false);
+function Sidebar() {
+  const linkClass =
+    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium text-sm group";
 
-  useEffect(() => {
-    loadStudents();
-  }, []);
+  // CORES DIRETAS AQUI:
+  const activeClass = "bg-indigo-600 text-white shadow-lg shadow-indigo-900/50";
+  const inactiveClass = "text-slate-400 hover:bg-white/5 hover:text-white";
 
-  const loadStudents = async () => {
-    setLoading(true);
-    try {
-      const list = await CadastroService.list();
-      setStudents(list);
-    } catch (error) {
-      console.error("Erro ao buscar alunos:", error);
-    } finally {
-      setLoading(false);
+  return (
+    <aside className="w-64 bg-slate-900 text-white flex flex-col fixed h-full z-20 shadow-xl border-r border-white/5">
+      {/* Logo */}
+      <div className="h-20 flex items-center px-6 border-b border-white/5">
+        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center mr-3 shadow-lg shadow-indigo-500/30">
+          <span className="font-bold text-white text-xl">E</span>
+        </div>
+        <div>
+          <h1 className="font-bold text-lg tracking-wide text-white">
+            Escola<span className="text-indigo-400 font-extrabold">Pro</span>
+          </h1>
+        </div>
+      </div>
+
+      {/* Navegação */}
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto mt-4">
+        <p className="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+          Principal
+        </p>
+
+        <NavLink
+          to="/"
+          className={({ isActive }) =>
+            `${linkClass} ${isActive ? activeClass : inactiveClass}`
+          }
+        >
+          <Icons.AddUser />
+          <span>Nova Matrícula</span>
+        </NavLink>
+
+        <NavLink
+          to="/lista"
+          className={({ isActive }) =>
+            `${linkClass} ${isActive ? activeClass : inactiveClass}`
+          }
+        >
+          <Icons.Users />
+          <span>Alunos & Turmas</span>
+        </NavLink>
+      </nav>
+
+      {/* Footer Sidebar */}
+      <div className="p-4 border-t border-white/5 bg-black/20">
+        <div className="flex items-center gap-3 px-2">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-xs font-bold ring-2 ring-slate-800">
+            AD
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white truncate">
+              Administrador
+            </p>
+            <p className="text-xs text-slate-500 truncate">Online agora</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function Header() {
+  const location = useLocation();
+  const getTitle = () => {
+    switch (location.pathname) {
+      case "/":
+        return "Nova Matrícula";
+      case "/lista":
+        return "Gestão de Alunos";
+      default:
+        return "Painel";
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-10 px-4 md:px-10 font-sans">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* CABEÇALHO */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800 tracking-tight">
-              Painel Escolar
-            </h1>
-            <p className="text-gray-500">Gerencie alunos e matrículas</p>
-          </div>
-          <div className="text-sm bg-blue-100 text-blue-800 py-1 px-3 rounded-full font-medium">
-            Versão 1.0
-          </div>
-        </div>
+    <header className="h-20 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-10">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          {getTitle()}
+        </h2>
+        <p className="text-xs text-gray-400 mt-0.5">
+          Sistema de Gestão Escolar
+        </p>
+      </div>
 
-        {/* ÁREA DE CADASTRO (Seu componente) */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-700">
-              Novo Cadastro
-            </h2>
-          </div>
-          {/* Passamos o loadStudents para atualizar a tabela após salvar */}
-          <TelaCadastro onSuccess={loadStudents} />
+      <div className="flex items-center gap-4">
+        <div className="w-10 h-10 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-500">
+          🔔
         </div>
+      </div>
+    </header>
+  );
+}
 
-        {/* ÁREA DE LISTAGEM (Tabela Estilizada) */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-700">
-              Alunos Cadastrados{" "}
-              <span className="text-gray-400 text-sm font-normal">
-                ({students.length})
-              </span>
-            </h2>
-            <button
-              onClick={loadStudents}
-              className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
-              title="Atualizar lista"
-            >
-              <RefreshIcon />
-            </button>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 text-gray-600 text-sm uppercase tracking-wider">
-                  <th className="p-4 font-semibold border-b">Nome</th>
-                  <th className="p-4 font-semibold border-b">CPF</th>
-                  <th className="p-4 font-semibold border-b">Turma</th>
-                  <th className="p-4 font-semibold border-b">Plano</th>
-                  <th className="p-4 font-semibold border-b text-right">
-                    Mensalidade
-                  </th>
-                  <th className="p-4 font-semibold border-b text-center">
-                    Vencimento
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="text-gray-700 text-sm">
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="p-8 text-center text-gray-500">
-                      Carregando dados...
-                    </td>
-                  </tr>
-                ) : students.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="p-8 text-center text-gray-400 italic"
-                    >
-                      Nenhum aluno cadastrado ainda. Use o formulário acima.
-                    </td>
-                  </tr>
-                ) : (
-                  students.map((student, index) => (
-                    <tr
-                      key={index}
-                      className="border-b last:border-0 hover:bg-blue-50/50 transition-colors"
-                    >
-                      <td className="p-4 font-medium text-gray-900">
-                        {student.nome}
-                      </td>
-                      <td className="p-4">{student.cpf}</td>
-                      <td className="p-4">
-                        <span className="px-2 py-1 bg-gray-100 rounded text-xs font-semibold text-gray-600">
-                          {student.turma}
-                        </span>
-                      </td>
-                      <td className="p-4">{student.planoMensal}</td>
-                      <td className="p-4 text-right font-medium text-green-600">
-                        R$ {Number(student.valorMensalidade || 0).toFixed(2)}
-                      </td>
-                      <td className="p-4 text-center">
-                        <span className="bg-blue-100 text-blue-700 py-1 px-2 rounded text-xs font-bold">
-                          Dia {student.diaVencimento}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+function WrapperCadastro() {
+  const navigate = useNavigate();
+  return (
+    <div className="max-w-4xl mx-auto animate-fade-in-up">
+      <div className="bg-white rounded-2xl shadow-xl shadow-gray-200 border border-gray-100 overflow-hidden">
+        <TelaCadastro onSuccess={() => navigate("/lista")} />
       </div>
     </div>
   );
 }
 
-export default App;
+function WrapperLista() {
+  return (
+    <div className="max-w-7xl mx-auto animate-fade-in-up">
+      <TelaListagem />
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <HashRouter>
+      <div className="flex min-h-screen bg-gray-50 font-sans text-gray-900">
+        <Sidebar />
+        <div className="flex-1 ml-64 flex flex-col">
+          <Header />
+          <main className="flex-1 p-8 overflow-y-auto">
+            <Routes>
+              <Route path="/" element={<WrapperCadastro />} />
+              <Route path="/lista" element={<WrapperLista />} />
+            </Routes>
+          </main>
+        </div>
+      </div>
+    </HashRouter>
+  );
+}
