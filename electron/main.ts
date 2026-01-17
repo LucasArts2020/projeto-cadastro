@@ -67,7 +67,7 @@ async function iniciarBanco(): Promise<void> {
       "node_modules",
       "sql.js",
       "dist",
-      "sql-wasm.wasm",
+      "sql-wasm.wasm"
     );
 
     const wasmBuffer = fs.readFileSync(wasmPath);
@@ -125,6 +125,8 @@ let win: BrowserWindow | null;
 
 function createWindow() {
   win = new BrowserWindow({
+    width: 1600,
+    height: 1000,
     icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
       preload: path.join(__dirname, "preload.mjs"),
@@ -240,5 +242,5 @@ ipcMain.handle(
       }
       return { success: false, error: errorMessage };
     }
-  },
+  }
 );

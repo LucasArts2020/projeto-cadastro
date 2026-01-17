@@ -72,6 +72,8 @@ function salvarBanco() {
 let win;
 function createWindow() {
   win = new BrowserWindow({
+    width: 1600,
+    height: 1e3,
     icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
       preload: path.join(__dirname$1, "preload.mjs")
