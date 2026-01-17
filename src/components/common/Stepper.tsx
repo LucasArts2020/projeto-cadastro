@@ -1,5 +1,3 @@
-import { Fragment } from "react";
-
 const CheckIcon = () => (
   <svg
     className="w-5 h-5 text-white"
