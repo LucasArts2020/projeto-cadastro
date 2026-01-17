@@ -1,4 +1,5 @@
-// src/components/common/Stepper.tsx
+import { Fragment } from "react";
+
 const CheckIcon = () => (
   <svg
     className="w-5 h-5 text-white"
@@ -26,18 +27,32 @@ const StepIndicator = ({
   return (
     <div className="flex flex-col items-center relative z-10">
       <div
-        className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${isActive ? "bg-indigo-600 border-indigo-600 shadow-lg shadow-indigo-300 scale-110" : isCompleted ? "bg-emerald-500 border-emerald-500" : "bg-white border-gray-300 text-gray-400"}`}
+        className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-500 ${
+          isActive
+            ? "bg-[#8CAB91] border-[#8CAB91] text-white shadow-lg shadow-[#8CAB91]/30 scale-110" // Etapa Atual (Sálvia)
+            : isCompleted
+              ? "bg-[#2C3A30] border-[#2C3A30] text-white" // Etapa Concluída (Verde Escuro)
+              : "bg-white border-stone-200 text-stone-300" // Inativo
+        }`}
       >
         {isCompleted ? (
           <CheckIcon />
         ) : (
-          <span className={`font-bold ${isActive ? "text-white" : ""}`}>
+          <span
+            className={`font-serif font-bold text-sm ${isActive ? "text-white" : ""}`}
+          >
             {num}
           </span>
         )}
       </div>
       <span
-        className={`mt-2 text-xs font-bold uppercase tracking-wider ${isActive ? "text-indigo-700" : isCompleted ? "text-emerald-600" : "text-gray-400"}`}
+        className={`mt-3 text-[10px] font-bold uppercase tracking-widest transition-colors duration-300 ${
+          isActive
+            ? "text-[#8CAB91]"
+            : isCompleted
+              ? "text-[#2C3A30]"
+              : "text-stone-400"
+        }`}
       >
         {title}
       </span>
@@ -51,10 +66,15 @@ interface StepperProps {
 
 export default function Stepper({ currentStep }: StepperProps) {
   return (
-    <div className="bg-gray-50 px-8 py-8 border-b border-gray-100 flex justify-center relative">
-      <div className="absolute top-12 left-1/4 right-1/4 h-1 bg-gray-200 -z-0 rounded"></div>
+    <div className="bg-white px-8 py-8 border-b border-stone-100 flex justify-center relative">
+      {/* Linha de Fundo (Cinza Claro) */}
+      <div className="absolute top-12 left-1/4 right-1/4 h-px bg-stone-200 z-0"></div>
+
+      {/* Linha de Progresso (Verde Sálvia) */}
       <div
-        className={`absolute top-12 left-1/4 h-1 bg-emerald-500 -z-0 rounded transition-all duration-500 ${currentStep === 2 ? "w-1/2" : "w-0"}`}
+        className={`absolute top-12 left-1/4 h-px bg-[#8CAB91] z-0 transition-all duration-700 ease-in-out ${
+          currentStep === 2 ? "w-1/2" : "w-0"
+        }`}
       ></div>
 
       <div className="flex justify-between w-full max-w-md">
