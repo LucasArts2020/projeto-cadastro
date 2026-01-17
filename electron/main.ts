@@ -87,7 +87,7 @@ async function iniciarBanco(): Promise<void> {
         CREATE TABLE IF NOT EXISTS students (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           nome TEXT NOT NULL,
-          rg TEXT NOT NULL,
+          rg TEXT,
           cpf TEXT UNIQUE NOT NULL,
           dataNascimento TEXT NOT NULL,
           telefone TEXT NOT NULL,
@@ -126,6 +126,8 @@ let win: BrowserWindow | null;
 
 function createWindow() {
   win = new BrowserWindow({
+    width: 1600,
+    height: 1000,
     icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
       preload: path.join(__dirname, "preload.mjs"),
