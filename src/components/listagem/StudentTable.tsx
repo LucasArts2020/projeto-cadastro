@@ -68,9 +68,19 @@ export default function StudentTable({ students, loading }: Props) {
                 >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-indigo-500/20">
-                        {getInitials(student.nome)}
+                      {/* Lógica da Foto AQUI */}
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-indigo-500/20 overflow-hidden">
+                        {student.fotoUrl ? (
+                          <img
+                            src={`media://${student.fotoUrl}`}
+                            alt={student.nome}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          getInitials(student.nome)
+                        )}
                       </div>
+
                       <div>
                         <div className="font-semibold text-gray-900">
                           {student.nome}
