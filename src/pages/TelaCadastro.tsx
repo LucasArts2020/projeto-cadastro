@@ -12,10 +12,15 @@ interface Props {
   onSuccess?: () => void;
 }
 
+interface Popup {
+  open: boolean;
+  key: number;
+}
+
 export default function TelaCadastro({ onSuccess }: Props) {
   const [etapa, setEtapa] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  const [showPopup, setShowPopup] = useState(false);
+  const [showPopup, setShowPopup] = useState<Popup>({ open: false, key: 0 });
 
   const [cadastroDados, setCadastroDados] = useState<Cadastro>({
     nome: "",
@@ -40,7 +45,7 @@ export default function TelaCadastro({ onSuccess }: Props) {
 
   const proximaEtapa = () => {
     if (!cadastroDados.nome || !cadastroDados.cpf) {
-      setShowPopup(true);
+      setShowPopup({ open: true, key: 1 });
       return;
     }
     setEtapa(2);
@@ -57,7 +62,7 @@ export default function TelaCadastro({ onSuccess }: Props) {
     try {
       await CadastroService.create(cadastroDados);
       setTimeout(() => {
-        alert("✅ Aluno matriculado com sucesso!");
+        setShowPopup({ open: true, key: 2 });
 
         setCadastroDados({
           nome: "",
@@ -80,7 +85,7 @@ export default function TelaCadastro({ onSuccess }: Props) {
         if (onSuccess) onSuccess();
       }, 500);
     } catch (error) {
-      setShowPopup(true);
+      setShowPopup({ open: true, key: 3 });
     } finally {
       setIsLoading(false);
     }
@@ -90,7 +95,7 @@ export default function TelaCadastro({ onSuccess }: Props) {
     <div className="flex flex-col h-full">
       <Stepper currentStep={etapa} />
 
-      <div className="p-8 bg-white min-h-[400px]">
+      <div className="p-8 bg-white min-h-100">
         {etapa === 1 ? (
           <StepPersonalData data={cadastroDados} onChange={handleChange} />
         ) : (
@@ -98,9 +103,21 @@ export default function TelaCadastro({ onSuccess }: Props) {
         )}
       </div>
       <div>
-        {showPopup && (
-          <Popup onClose={() => setShowPopup(false)}>
-            <h2 className="text-lg font-semibold mb-2">Erro</h2>
+        {showPopup.open && showPopup.key === 1 && (
+          <Popup onClose={() => setShowPopup({ open: false, key: 0 })}>
+            <h2 className="text-lg font-semibold mb-2">Preencha os campos</h2>
+          </Popup>
+        )}
+        {showPopup.open && showPopup.key === 2 && (
+          <Popup onClose={() => setShowPopup({ open: false, key: 0 })}>
+            <h2 className="text-lg font-semibold mb-2">
+              Aluno cadastrado com sucesso
+            </h2>
+          </Popup>
+        )}
+        {showPopup.open && showPopup.key === 3 && (
+          <Popup onClose={() => setShowPopup({ open: false, key: 0 })}>
+            <h2 className="text-lg font-semibold mb-2">Erro ao cadastrar</h2>
           </Popup>
         )}
       </div>
