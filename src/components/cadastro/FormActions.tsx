@@ -1,4 +1,3 @@
-// src/components/cadastro/FormActions.tsx
 interface Props {
   step: number;
   isLoading: boolean;
@@ -15,11 +14,11 @@ export default function FormActions({
   onSave,
 }: Props) {
   return (
-    <div className="px-8 py-5 bg-gray-50 border-t border-gray-200 flex justify-between items-center mt-auto">
+    <div className="px-8 py-5 bg-stone-50 border-t border-stone-200 flex justify-between items-center mt-auto">
       {step === 2 ? (
         <button
           onClick={onBack}
-          className="text-gray-600 font-semibold hover:text-gray-900 transition flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-200 cursor-pointer"
+          className="text-stone-500 font-medium hover:text-[#8CAB91] transition flex items-center gap-2 px-4 py-2 uppercase tracking-wide text-sm cursor-pointer"
         >
           ← Voltar
         </button>
@@ -30,7 +29,7 @@ export default function FormActions({
       {step === 1 ? (
         <button
           onClick={onNext}
-          className="bg-indigo-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-indigo-600/30 hover:bg-indigo-700 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2 cursor-pointer"
+          className="bg-[#8CAB91] text-white font-medium py-3 px-8 shadow-lg shadow-[#8CAB91]/30 hover:bg-[#7A987F] hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2 cursor-pointer uppercase tracking-widest text-sm"
         >
           Continuar <span>→</span>
         </button>
@@ -38,9 +37,9 @@ export default function FormActions({
         <button
           onClick={onSave}
           disabled={isLoading}
-          className="bg-emerald-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-emerald-600/30 hover:bg-emerald-500 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+          className="bg-[#2C3A30] text-white font-medium py-3 px-8 shadow-lg hover:bg-black hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed uppercase tracking-widest text-sm"
         >
-          {isLoading ? "Salvando..." : "✅ Confirmar Matrícula"}
+          {isLoading ? "Salvando..." : "Finalizar Matrícula"}
         </button>
       )}
     </div>
