@@ -1,15 +1,21 @@
 import { useState } from "react";
-import FormInput from "../components/FormInput"; // Importe o componente melhorado
 import { Cadastro } from "../types/typeCadastro";
 import { CadastroService } from "../services/CadastroService";
 
-// Interface para aceitar a função de recarregar a lista
+// Novos Componentes
+import Stepper from "../components/common/Stepper";
+import StepPersonalData from "../components/cadastro/StepPersonalData";
+import StepFinancialData from "../components/cadastro/StepFinancialData";
+import FormActions from "../components/cadastro/FormActions";
+
 interface Props {
   onSuccess?: () => void;
 }
 
 export default function TelaCadastro({ onSuccess }: Props) {
-  // Estado inicial tipado
+  const [etapa, setEtapa] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+
   const [cadastroDados, setCadastroDados] = useState<Cadastro>({
     nome: "",
     rg: "",
@@ -27,172 +33,80 @@ export default function TelaCadastro({ onSuccess }: Props) {
     diaVencimento: "",
   });
 
-  // Função genérica para atualizar qualquer campo
   function handleChange(name: keyof Cadastro, value: any) {
-    setCadastroDados((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setCadastroDados((prev) => ({ ...prev, [name]: value }));
   }
 
-  // Função de salvar com feedback e callback
+  const proximaEtapa = () => {
+    if (!cadastroDados.nome || !cadastroDados.cpf) {
+      alert("⚠️ Preencha Nome e CPF para continuar.");
+      return;
+    }
+    setEtapa(2);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const etapaAnterior = () => {
+    setEtapa(1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   async function salvar() {
+    setIsLoading(true);
     try {
       await CadastroService.create(cadastroDados);
-      alert("Cadastrado com sucesso ✅");
-
-      // Limpa o formulário para o próximo
-      setCadastroDados({
-        nome: "",
-        rg: "",
-        cpf: "",
-        dataNascimento: "",
-        telefone: "",
-        telefone2: "",
-        endereco: "",
-        fotoUrl: null,
-        turma: "",
-        valorMatricula: 0,
-        planoMensal: "",
-        valorMensalidade: 0,
-        formaPagamento: "",
-        diaVencimento: "",
-      });
-
-      // Avisa o componente pai (App) para atualizar a tabela
-      if (onSuccess) onSuccess();
+      setTimeout(() => {
+        alert("✅ Aluno matriculado com sucesso!");
+        // Reset
+        setCadastroDados({
+          nome: "",
+          rg: "",
+          cpf: "",
+          dataNascimento: "",
+          telefone: "",
+          telefone2: "",
+          endereco: "",
+          fotoUrl: null,
+          turma: "",
+          valorMatricula: 0,
+          planoMensal: "",
+          valorMensalidade: 0,
+          formaPagamento: "",
+          diaVencimento: "",
+        });
+        setEtapa(1);
+        setIsLoading(false);
+        if (onSuccess) onSuccess();
+      }, 500);
     } catch (error) {
       console.error(error);
-      alert("Erro ao salvar cadastro.");
+      alert("❌ Erro ao salvar cadastro.");
+      setIsLoading(false);
     }
   }
 
   return (
-    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-      {/* Nome ocupa 2 colunas */}
-      <FormInput<Cadastro>
-        label="Nome Completo"
-        name="nome"
-        value={cadastroDados.nome}
-        onChange={handleChange}
-        className="col-span-1 md:col-span-2"
+    <div className="flex flex-col h-full">
+      {/* 1. Indicador de Progresso */}
+      <Stepper currentStep={etapa} />
+
+      {/* 2. Conteúdo do Formulário (Renderização Condicional) */}
+      <div className="p-8 bg-white min-h-[400px]">
+        {etapa === 1 ? (
+          <StepPersonalData data={cadastroDados} onChange={handleChange} />
+        ) : (
+          <StepFinancialData data={cadastroDados} onChange={handleChange} />
+        )}
+      </div>
+
+      {/* 3. Botões de Ação */}
+      <FormActions
+        step={etapa}
+        isLoading={isLoading}
+        onBack={etapaAnterior}
+        onNext={proximaEtapa}
+        onSave={salvar}
       />
-
-      <FormInput<Cadastro>
-        label="RG"
-        name="rg"
-        value={cadastroDados.rg}
-        onChange={handleChange}
-      />
-
-      <FormInput<Cadastro>
-        label="CPF"
-        name="cpf"
-        value={cadastroDados.cpf}
-        onChange={handleChange}
-      />
-
-      <FormInput<Cadastro>
-        label="Data de Nascimento"
-        name="dataNascimento"
-        type="date"
-        value={cadastroDados.dataNascimento}
-        onChange={handleChange}
-      />
-
-      <FormInput<Cadastro>
-        label="Telefone"
-        name="telefone"
-        value={cadastroDados.telefone}
-        onChange={handleChange}
-      />
-
-      <FormInput<Cadastro>
-        label="Telefone 2 (Opcional)"
-        name="telefone2"
-        value={cadastroDados.telefone2}
-        onChange={handleChange}
-      />
-
-      {/* Endereço ocupa 2 colunas */}
-      <FormInput<Cadastro>
-        label="Endereço"
-        name="endereco"
-        value={cadastroDados.endereco}
-        onChange={handleChange}
-        className="col-span-1 md:col-span-2"
-      />
-
-      {/* Upload de Foto ocupa 2 colunas */}
-      <FormInput<Cadastro>
-        label="Foto do Aluno"
-        name="fotoUrl"
-        type="file"
-        // Em input file, não passamos 'value' para evitar erros de componente controlado
-        onChange={handleChange}
-        className="col-span-1 md:col-span-2"
-      />
-
-      <hr className="col-span-1 md:col-span-2 my-2 border-gray-200" />
-
-      <FormInput<Cadastro>
-        label="Turma"
-        name="turma"
-        value={cadastroDados.turma}
-        onChange={handleChange}
-      />
-
-      <FormInput<Cadastro>
-        label="Valor Matrícula (R$)"
-        name="valorMatricula"
-        type="number"
-        value={cadastroDados.valorMatricula}
-        onChange={handleChange}
-      />
-
-      <FormInput<Cadastro>
-        label="Plano Mensal"
-        name="planoMensal"
-        value={cadastroDados.planoMensal}
-        onChange={handleChange}
-      />
-
-      <FormInput<Cadastro>
-        label="Valor Mensalidade (R$)"
-        name="valorMensalidade"
-        type="number"
-        value={cadastroDados.valorMensalidade}
-        onChange={handleChange}
-      />
-
-      <FormInput<Cadastro>
-        label="Forma de Pagamento"
-        name="formaPagamento"
-        type="select"
-        value={cadastroDados.formaPagamento}
-        options={[
-          { value: "PIX", label: "PIX" },
-          { value: "CARTAO", label: "Cartão de Crédito/Débito" },
-          { value: "DINHEIRO", label: "Dinheiro" },
-          { value: "BOLETO", label: "Boleto Bancário" },
-        ]}
-        onChange={handleChange}
-      />
-
-      <FormInput<Cadastro>
-        label="Dia de Vencimento"
-        name="diaVencimento"
-        type="number"
-        value={cadastroDados.diaVencimento}
-        onChange={handleChange}
-      />
-
-      <button
-        onClick={salvar}
-        className="col-span-1 md:col-span-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-200 mt-4 cursor-pointer"
-      >
-        Salvar Cadastro
-      </button>
     </div>
   );
 }
