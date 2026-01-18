@@ -6,7 +6,8 @@ export interface Cadastro {
   telefone: string;
   telefone2: string;
   endereco: string;
-  fotoUrl: File | null;
+  fotoFile?: File | null;
+  fotoUrl?: string;
   turma: string;
   valorMatricula: number;
   planoMensal: string;

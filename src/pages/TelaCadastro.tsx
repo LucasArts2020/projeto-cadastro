@@ -30,7 +30,7 @@ export default function TelaCadastro({ onSuccess }: Props) {
     telefone: "",
     telefone2: "",
     endereco: "",
-    fotoUrl: null,
+    fotoFile: null,
     turma: "",
     valorMatricula: 0,
     planoMensal: "",
@@ -40,7 +40,11 @@ export default function TelaCadastro({ onSuccess }: Props) {
   });
 
   function handleChange(name: keyof Cadastro, value: any) {
-    setCadastroDados((prev) => ({ ...prev, [name]: value }));
+    setCadastroDados((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(value instanceof File && { fotoFile: value }),
+    }));
   }
 
   const proximaEtapa = () => {
@@ -72,7 +76,7 @@ export default function TelaCadastro({ onSuccess }: Props) {
           telefone: "",
           telefone2: "",
           endereco: "",
-          fotoUrl: null,
+          fotoFile: null,
           turma: "",
           valorMatricula: 0,
           planoMensal: "",
