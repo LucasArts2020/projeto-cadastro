@@ -51,6 +51,21 @@ async function iniciarBanco() {
           diaVencimento INTEGER NOT NULL,
           createdAt TEXT DEFAULT CURRENT_TIMESTAMP
         );
+        CREATE TABLE IF NOT EXISTS classes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        turma TEXT NOT NULL,
+        data_aula TEXT NOT NULL, -- Formato YYYY-MM-DD
+        descricao TEXT
+  );
+
+        CREATE TABLE IF NOT EXISTS attendance (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        class_id INTEGER NOT NULL,
+        status TEXT CHECK(status IN ('presente', 'falta', 'justificado')) NOT NULL,
+        FOREIGN KEY (student_id) REFERENCES students(id),
+        FOREIGN KEY (class_id) REFERENCES classes(id)
+  );
       `);
       salvarBanco();
       console.log("Novo banco de dados criado.");
