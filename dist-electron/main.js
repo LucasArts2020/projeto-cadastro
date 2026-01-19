@@ -1,8 +1,9 @@
-import { app, ipcMain, BrowserWindow } from "electron";
+import { app, protocol, net, ipcMain, BrowserWindow } from "electron";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import fs from "node:fs";
 import { createRequire } from "node:module";
+import crypto from "node:crypto";
 const require$1 = createRequire(import.meta.url);
 const initSqlJs = require$1("sql.js");
 class DatabaseManager {
@@ -178,7 +179,29 @@ class StudentRepository {
       return { success: false, error: msg };
     }
   }
+  saveImg(file) {
+    const imagesDir = path.join(app.getPath("userData"), "images");
+    if (!fs.existsSync(imagesDir)) {
+      fs.mkdirSync(imagesDir, { recursive: true });
+    }
+    const ext = path.extname(file.name);
+    const fileName = crypto.randomUUID() + ext;
+    const filePath = path.join(imagesDir, fileName);
+    fs.writeFileSync(filePath, Buffer.from(file.buffer));
+    return filePath;
+  }
 }
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: "media",
+    privileges: {
+      secure: true,
+      standard: true,
+      supportFetchAPI: true,
+      bypassCSP: true
+    }
+  }
+]);
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -213,6 +236,28 @@ app.on("window-all-closed", () => {
   }
 });
 app.whenReady().then(async () => {
+  protocol.handle("media", (request) => {
+    try {
+      const url = new URL(request.url);
+      let filePath = decodeURIComponent(url.hostname + url.pathname);
+      if (filePath.startsWith("/")) {
+        filePath = filePath.slice(1);
+      }
+      if (filePath.match(/^[a-zA-Z]\//)) {
+        filePath = filePath[0] + ":" + filePath.slice(1);
+      }
+      const finalizedPath = path.normalize(filePath);
+      console.log("Caminho Processado:", finalizedPath);
+      if (!fs.existsSync(finalizedPath)) {
+        console.error(`[ERRO CRÍTICO] Arquivo não existe: ${finalizedPath}`);
+        return new Response("Arquivo não encontrado", { status: 404 });
+      }
+      return net.fetch(pathToFileURL(finalizedPath).toString());
+    } catch (error) {
+      console.error("Erro no protocolo media:", error);
+      return new Response("Erro", { status: 500 });
+    }
+  });
   await dbManager.init();
   createWindow();
 });
@@ -221,6 +266,9 @@ ipcMain.handle("get-alunos", () => {
 });
 ipcMain.handle("add-aluno", (event, dados) => {
   return studentRepo.create(dados);
+});
+ipcMain.handle("save-image", (_, file) => {
+  return studentRepo.saveImg(file);
 });
 export {
   MAIN_DIST,

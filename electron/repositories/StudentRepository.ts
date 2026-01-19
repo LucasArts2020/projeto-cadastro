@@ -1,4 +1,8 @@
 import { DatabaseManager, SqlValue } from "../database/DatabaseManager";
+import path from "node:path";
+import fs from "node:fs";
+import { app } from "electron";
+import crypto from "node:crypto";
 
 // Interface igual ao Front-End
 export interface Student {
@@ -128,5 +132,21 @@ export class StudentRepository {
       console.error("Erro no repository create:", msg);
       return { success: false, error: msg };
     }
+  }
+
+  saveImg(file: { name: string; buffer: ArrayBuffer }): string {
+    const imagesDir = path.join(app.getPath("userData"), "images");
+
+    if (!fs.existsSync(imagesDir)) {
+      fs.mkdirSync(imagesDir, { recursive: true });
+    }
+
+    const ext = path.extname(file.name);
+    const fileName = crypto.randomUUID() + ext;
+    const filePath = path.join(imagesDir, fileName);
+
+    fs.writeFileSync(filePath, Buffer.from(file.buffer));
+
+    return filePath;
   }
 }

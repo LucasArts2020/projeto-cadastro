@@ -136,7 +136,7 @@ function CardChamada({ student }: { student: Cadastro }) {
       <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0 border border-gray-100">
         {student.fotoUrl ? (
           <img
-            src={student.fotoUrl}
+            src={`media://${student.fotoUrl}`}
             alt={student.nome}
             className="w-full h-full object-cover"
           />

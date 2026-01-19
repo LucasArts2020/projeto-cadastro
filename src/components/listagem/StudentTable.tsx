@@ -21,6 +21,10 @@ export default function StudentTable({ students, loading }: Props) {
     if (dia <= 20) return "bg-stone-100 text-stone-600 border-stone-200"; // Neutro (Pedra)
     return "bg-amber-50 text-amber-700 border-amber-100"; // Alerta suave
   };
+  const getImageSrc = (path?: string | null) => {
+    if (!path) return null;
+    return `file:///${path.replace(/\\/g, "/")}`;
+  };
 
   return (
     <div className="bg-white shadow-sm border border-stone-100">
@@ -79,9 +83,16 @@ export default function StudentTable({ students, loading }: Props) {
                             src={`media://${student.fotoUrl}`}
                             alt={student.nome}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              console.error(
+                                "Falha no HTML ao ler:",
+                                `media://${student.fotoUrl}`,
+                              );
+                              e.currentTarget.style.display = "none";
+                              e.currentTarget.style.display = "none";
+                            }}
                           />
                         ) : (
-                          // Iniciais com fonte Serifada elegante
                           <span>{getInitials(student.nome)}</span>
                         )}
                       </div>

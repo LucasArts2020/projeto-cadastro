@@ -5,9 +5,9 @@ contextBridge.exposeInMainWorld("api", {
 
   createCadastro: (data: any) => ipcRenderer.invoke("add-aluno", data),
 
-  saveImage: (file: File) =>
+  saveImage: (file: { name: string; buffer: ArrayBuffer }) =>
     ipcRenderer.invoke("save-image", {
       name: file.name,
-      buffer: file.arrayBuffer(),
+      buffer: file.buffer,
     }),
 });

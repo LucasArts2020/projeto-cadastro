@@ -1,9 +1,22 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, protocol, net } from "electron";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import fs from "node:fs";
 
 import { DatabaseManager } from "./database/DatabaseManager";
 import { StudentRepository } from "./repositories/StudentRepository";
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: "media",
+    privileges: {
+      secure: true,
+      standard: true,
+      supportFetchAPI: true,
+      bypassCSP: true,
+    },
+  },
+]);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -50,6 +63,43 @@ app.on("window-all-closed", () => {
 });
 
 app.whenReady().then(async () => {
+  protocol.handle("media", (request) => {
+    try {
+      // 1. Pegamos a URL e removemos o protocolo
+      const url = new URL(request.url);
+
+      // No Windows, o 'C:' vira o 'hostname' e o resto vira o 'pathname'
+      // Combinamos os dois para reconstruir o caminho original
+      let filePath = decodeURIComponent(url.hostname + url.pathname);
+
+      // 2. Se o caminho começar com uma barra (ex: /C:/Users), removemos essa primeira barra
+      if (filePath.startsWith("/")) {
+        filePath = filePath.slice(1);
+      }
+
+      // 3. Se por algum motivo o ':' sumiu (como no seu erro), nós o colocamos de volta
+      // Isso corrige 'c/Users' para 'c:/Users'
+      if (filePath.match(/^[a-zA-Z]\//)) {
+        filePath = filePath[0] + ":" + filePath.slice(1);
+      }
+
+      const finalizedPath = path.normalize(filePath);
+
+      // LOG DE VERIFICAÇÃO FINAL
+      console.log("Caminho Processado:", finalizedPath);
+
+      if (!fs.existsSync(finalizedPath)) {
+        console.error(`[ERRO CRÍTICO] Arquivo não existe: ${finalizedPath}`);
+        return new Response("Arquivo não encontrado", { status: 404 });
+      }
+
+      return net.fetch(pathToFileURL(finalizedPath).toString());
+    } catch (error) {
+      console.error("Erro no protocolo media:", error);
+      return new Response("Erro", { status: 500 });
+    }
+  });
+
   await dbManager.init();
   createWindow();
 });
@@ -60,4 +110,8 @@ ipcMain.handle("get-alunos", () => {
 
 ipcMain.handle("add-aluno", (event, dados) => {
   return studentRepo.create(dados);
+});
+
+ipcMain.handle("save-image", (_, file) => {
+  return studentRepo.saveImg(file);
 });
