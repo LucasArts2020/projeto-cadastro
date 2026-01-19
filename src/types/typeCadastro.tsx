@@ -9,6 +9,8 @@ export interface Cadastro {
   fotoFile?: File | null;
   fotoUrl?: string;
   turma: string;
+  diasSemana: string[];
+  horarioAula: string;
   valorMatricula: number;
   planoMensal: string;
   valorMensalidade: number;

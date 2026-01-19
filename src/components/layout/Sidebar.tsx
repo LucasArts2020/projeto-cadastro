@@ -52,6 +52,16 @@ export default function Sidebar() {
           <Icons.Users />
           <span>Alunos</span>
         </NavLink>
+        <NavLink
+          to="/turmas"
+          className={({ isActive }) =>
+            `${linkClass} ${isActive ? activeClass : inactiveClass}`
+          }
+        >
+          <Icons.Calendar />{" "}
+          {/* Importe Calendar no Icons.tsx ou use um existente */}
+          <span>Turmas</span>
+        </NavLink>
       </nav>
 
       {/* Footer Sidebar */}

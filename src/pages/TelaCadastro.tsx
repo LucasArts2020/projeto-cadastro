@@ -12,7 +12,7 @@ interface Props {
   onSuccess?: () => void;
 }
 
-interface Popup {
+interface PopupState {
   open: boolean;
   key: number;
 }
@@ -20,8 +20,12 @@ interface Popup {
 export default function TelaCadastro({ onSuccess }: Props) {
   const [etapa, setEtapa] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  const [showPopup, setShowPopup] = useState<Popup>({ open: false, key: 0 });
+  const [showPopup, setShowPopup] = useState<PopupState>({
+    open: false,
+    key: 0,
+  });
 
+  // 1. INICIALIZAÇÃO DO ESTADO COM OS NOVOS CAMPOS
   const [cadastroDados, setCadastroDados] = useState<Cadastro>({
     nome: "",
     rg: "",
@@ -37,6 +41,8 @@ export default function TelaCadastro({ onSuccess }: Props) {
     valorMensalidade: 0,
     formaPagamento: "",
     diaVencimento: "",
+    diasSemana: [], // Novo: Array vazio
+    horarioAula: "", // Novo: String vazia
   });
 
   function handleChange(name: keyof Cadastro, value: any) {
@@ -65,9 +71,11 @@ export default function TelaCadastro({ onSuccess }: Props) {
     setIsLoading(true);
     try {
       await CadastroService.create(cadastroDados);
+
       setTimeout(() => {
         setShowPopup({ open: true, key: 2 });
 
+        // 2. RESET DO FORMULÁRIO APÓS SUCESSO
         setCadastroDados({
           nome: "",
           rg: "",
@@ -83,7 +91,10 @@ export default function TelaCadastro({ onSuccess }: Props) {
           valorMensalidade: 0,
           formaPagamento: "",
           diaVencimento: "",
+          diasSemana: [], // Resetar dias
+          horarioAula: "", // Resetar horário
         });
+
         setEtapa(1);
         setIsLoading(false);
         if (onSuccess) onSuccess();
@@ -106,22 +117,35 @@ export default function TelaCadastro({ onSuccess }: Props) {
           <StepFinancialData data={cadastroDados} onChange={handleChange} />
         )}
       </div>
+
+      {/* Área de Popups */}
       <div>
         {showPopup.open && showPopup.key === 1 && (
           <Popup onClose={() => setShowPopup({ open: false, key: 0 })}>
-            <h2 className="text-lg font-semibold mb-2">Preencha os campos</h2>
+            <h2 className="text-lg font-semibold mb-2">
+              Preencha os campos obrigatórios
+            </h2>
+            <p className="text-sm text-gray-500">
+              Nome e CPF são necessários para avançar.
+            </p>
           </Popup>
         )}
         {showPopup.open && showPopup.key === 2 && (
           <Popup onClose={() => setShowPopup({ open: false, key: 0 })}>
-            <h2 className="text-lg font-semibold mb-2">
-              Aluno cadastrado com sucesso
-            </h2>
+            <div className="text-center">
+              <h2 className="text-lg font-semibold mb-2 text-green-600">
+                Sucesso!
+              </h2>
+              <p className="text-gray-600">Aluno cadastrado corretamente.</p>
+            </div>
           </Popup>
         )}
         {showPopup.open && showPopup.key === 3 && (
           <Popup onClose={() => setShowPopup({ open: false, key: 0 })}>
-            <h2 className="text-lg font-semibold mb-2">Erro ao cadastrar</h2>
+            <h2 className="text-lg font-semibold mb-2 text-red-600">Erro</h2>
+            <p className="text-sm text-gray-500">
+              Não foi possível salvar o cadastro.
+            </p>
           </Popup>
         )}
       </div>

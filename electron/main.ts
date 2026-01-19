@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
 
-// --- 1. AJUSTE NA INTERFACE PARA BATER COM O FRONT-END ---
+// --- 1. ATUALIZAÇÃO DA INTERFACE (Adicionado diasSemana e horarioAula) ---
 interface Student {
   id?: number;
   nome: string;
@@ -12,15 +12,20 @@ interface Student {
   cpf: string;
   dataNascimento: string;
   telefone: string;
-  telefone2?: string; // Alterado de telefoneEmergencia para telefone2
+  telefone2?: string;
   endereco: string;
-  fotoUrl?: string | null; // Alterado de foto para fotoUrl
+  fotoUrl?: string | null;
   turma: string;
   valorMatricula: number;
   planoMensal: string;
   valorMensalidade: number;
   formaPagamento: string;
-  diaVencimento: number | string; // Aceita string caso venha do input
+  diaVencimento: number | string;
+
+  // NOVOS CAMPOS
+  diasSemana?: string[]; // No banco será salvo como string, mas aqui entra como array
+  horarioAula?: string;
+
   createdAt?: string;
 }
 
@@ -83,6 +88,8 @@ async function iniciarBanco(): Promise<void> {
       console.log("Banco de dados carregado com sucesso.");
     } else {
       db = new SQL.Database() as Database;
+
+      // --- 2. CRIAÇÃO DAS TABELAS COM OS NOVOS CAMPOS ---
       db?.run(`
         CREATE TABLE IF NOT EXISTS students (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,33 +107,35 @@ async function iniciarBanco(): Promise<void> {
           valorMensalidade REAL NOT NULL,
           formaPagamento TEXT NOT NULL,
           diaVencimento INTEGER NOT NULL,
+          
+          -- NOVOS CAMPOS ADICIONADOS AQUI:
+          diasSemana TEXT,  -- Salvará o JSON (ex: '["Seg", "Qua"]')
+          horarioAula TEXT, -- Salvará o horário (ex: '19:00')
+
           createdAt TEXT DEFAULT CURRENT_TIMESTAMP
         );
+
         CREATE TABLE IF NOT EXISTS classes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        turma TEXT NOT NULL,
-        data_aula TEXT NOT NULL, -- Formato YYYY-MM-DD
-        descricao TEXT
-  );
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          turma TEXT NOT NULL,
+          data_aula TEXT NOT NULL,
+          descricao TEXT
+        );
 
         CREATE TABLE IF NOT EXISTS attendance (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        student_id INTEGER NOT NULL,
-        class_id INTEGER NOT NULL,
-        status TEXT CHECK(status IN ('presente', 'falta', 'justificado')) NOT NULL,
-        FOREIGN KEY (student_id) REFERENCES students(id),
-        FOREIGN KEY (class_id) REFERENCES classes(id)
-  );
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          student_id INTEGER NOT NULL,
+          class_id INTEGER NOT NULL,
+          status TEXT CHECK(status IN ('presente', 'falta', 'justificado')) NOT NULL,
+          FOREIGN KEY (student_id) REFERENCES students(id),
+          FOREIGN KEY (class_id) REFERENCES classes(id)
+        );
       `);
       salvarBanco();
       console.log("Novo banco de dados criado.");
     }
   } catch (err: unknown) {
-    if (err instanceof Error) {
-      console.error("ERRO CRÍTICO NO BANCO:", err.message);
-    } else {
-      console.error("ERRO DESCONHECIDO NO BANCO:", err);
-    }
+    console.error("ERRO CRÍTICO NO BANCO:", err);
   }
 }
 
@@ -178,12 +187,11 @@ interface ApiResponse<T = void> {
   error?: string;
 }
 
+// --- 3. LEITURA DOS DADOS (Convertendo de volta para Array) ---
 ipcMain.handle("get-alunos", (): Student[] => {
   try {
     if (!db) return [];
-
     const result = db.exec("SELECT * FROM students ORDER BY id DESC");
-
     if (result.length === 0) return [];
 
     const columns = result[0].columns;
@@ -191,96 +199,94 @@ ipcMain.handle("get-alunos", (): Student[] => {
 
     const alunos: Student[] = values.map((row) => {
       const obj: any = {};
-
       columns.forEach((col, i) => {
         obj[col] = row[i];
       });
 
-      // Conversão na volta (banco -> front)
-      // Ajusta o nome das chaves para o front entender
+      // CONVERSÃO IMPORTANTE:
+      // O banco devolve string '["Seg","Qua"]', o front precisa de array ["Seg","Qua"]
+      let diasParsed: string[] = [];
+      try {
+        if (obj.diasSemana) {
+          diasParsed = JSON.parse(obj.diasSemana);
+        }
+      } catch (e) {
+        diasParsed = [];
+      }
+
       return {
         ...obj,
         telefone2: obj.telefoneEmergencia,
         fotoUrl: obj.foto,
+        diasSemana: diasParsed, // Campo convertido
+        horarioAula: obj.horarioAula, // Campo simples
       } as Student;
     });
 
     return alunos;
   } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.error("Erro ao buscar:", error.message);
-    }
+    console.error("Erro ao buscar:", error);
     return [];
   }
 });
 
+// --- 4. SALVAMENTO DOS DADOS (Convertendo Array para String) ---
 ipcMain.handle(
   "add-aluno",
   (event: IpcMainInvokeEvent, dados: Student): ApiResponse => {
     try {
       if (!db) return { success: false, error: "Banco não iniciado" };
 
-      // Validação básica para evitar erro de NaN
       const diaVencimentoSafe = parseInt(String(dados.diaVencimento || 0));
+
+      // CONVERSÃO IMPORTANTE: Array -> JSON String
+      const diasSemanaString = JSON.stringify(dados.diasSemana || []);
 
       const stmt = db.prepare(`
       INSERT INTO students (
         nome, rg, cpf, dataNascimento, telefone, telefoneEmergencia, 
         endereco, foto, turma, valorMatricula, planoMensal, 
-        valorMensalidade, formaPagamento, diaVencimento
+        valorMensalidade, formaPagamento, diaVencimento,
+        diasSemana, horarioAula
       ) VALUES (
         $nome, $rg, $cpf, $dataNascimento, $telefone, $telefoneEmergencia, 
         $endereco, $foto, $turma, $valorMatricula, $planoMensal, 
-        $valorMensalidade, $formaPagamento, $diaVencimento
+        $valorMensalidade, $formaPagamento, $diaVencimento,
+        $diasSemana, $horarioAula
       )
     `);
 
-      // --- 2. CORREÇÃO CRÍTICA AQUI ---
       const params: Record<string, SqlValue> = {
         $nome: dados.nome,
         $rg: dados.rg,
         $cpf: dados.cpf,
         $dataNascimento: dados.dataNascimento,
         $telefone: dados.telefone,
-
-        // Mapeia 'telefone2' (front) para 'telefoneEmergencia' (banco)
-        // Se vier vazio, manda string vazia "" para não quebrar o NOT NULL
         $telefoneEmergencia: dados.telefone2 || "",
-
         $endereco: dados.endereco,
-
-        // Mapeia 'fotoUrl' (front) para 'foto' (banco)
         $foto: dados.fotoUrl || null,
-
         $turma: dados.turma,
         $valorMatricula: dados.valorMatricula,
         $planoMensal: dados.planoMensal,
         $valorMensalidade: dados.valorMensalidade,
         $formaPagamento: dados.formaPagamento,
         $diaVencimento: diaVencimentoSafe,
+
+        // Novos valores
+        $diasSemana: diasSemanaString,
+        $horarioAula: dados.horarioAula || "",
       };
 
       stmt.run(params);
       stmt.free();
-
       salvarBanco();
 
       return { success: true };
     } catch (error: unknown) {
-      let errorMessage = "Erro desconhecido";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-        console.error("Erro ao inserir:", errorMessage);
-
-        // Dica extra para debugar se der erro de constraint
-        if (errorMessage.includes("NOT NULL constraint failed")) {
-          return {
-            success: false,
-            error: "Preencha todos os campos obrigatórios.",
-          };
-        }
-      }
-      return { success: false, error: errorMessage };
+      let msg = "Erro desconhecido";
+      if (error instanceof Error) msg = error.message;
+      console.error("Erro ao inserir:", msg);
+      return { success: false, error: msg };
     }
   },
 );
