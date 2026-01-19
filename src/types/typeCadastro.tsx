@@ -1,4 +1,5 @@
 export interface Cadastro {
+  id?: number;
   nome: string;
   rg: string;
   cpf: string;

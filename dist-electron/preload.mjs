@@ -6,5 +6,8 @@ electron.contextBridge.exposeInMainWorld("api", {
   saveImage: (file) => electron.ipcRenderer.invoke("save-image", {
     name: file.name,
     buffer: file.buffer
-  })
+  }),
+  saveAttendance: (data) => electron.ipcRenderer.invoke("save-attendance", data),
+  getAttendanceHistory: () => electron.ipcRenderer.invoke("get-attendance-history"),
+  getClassDetails: (id) => electron.ipcRenderer.invoke("get-class-details", id)
 });

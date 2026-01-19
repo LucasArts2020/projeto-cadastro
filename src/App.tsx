@@ -6,6 +6,7 @@ import Header from "./components/layout/Header";
 import WrapperCadastro from "./components/layout/WrapperCadastro";
 import WrapperLista from "./components/layout/WrapperLista";
 import WrapperTurmas from "./components/layout/WrapperTurmas";
+import WrapperHistorico from "./components/layout/WrapperHistorico";
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
               <Route path="/" element={<WrapperCadastro />} />
               <Route path="/lista" element={<WrapperLista />} />
               <Route path="/turmas" element={<WrapperTurmas />} />
+              <Route path="/historico" element={<WrapperHistorico />} />
             </Routes>
           </main>
         </div>

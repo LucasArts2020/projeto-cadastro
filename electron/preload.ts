@@ -10,4 +10,7 @@ contextBridge.exposeInMainWorld("api", {
       name: file.name,
       buffer: file.buffer,
     }),
+  saveAttendance: (data: any) => ipcRenderer.invoke("save-attendance", data),
+  getAttendanceHistory: () => ipcRenderer.invoke("get-attendance-history"),
+  getClassDetails: (id: number) => ipcRenderer.invoke("get-class-details", id),
 });

@@ -1,17 +1,35 @@
 import { useState, useEffect, useMemo } from "react";
 import { CadastroService } from "../services/CadastroService";
+import { AttendanceService } from "../services/AttendanceService";
 import { Cadastro } from "../types/typeCadastro";
 import { Icons } from "../components/common/Icons";
+import Popup from "../components/layout/popup";
+
+// --- Tipos Auxiliares ---
+type ViewState = "SELECAO" | "CHAMADA";
+
+interface ClassGroup {
+  turma: string;
+  horario: string;
+  totalAlunos: number;
+  alunos: Cadastro[];
+}
 
 export default function TelaTurmas() {
+  // --- Estados Globais ---
   const [students, setStudents] = useState<Cadastro[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentView, setCurrentView] = useState<ViewState>("SELECAO");
+  const [diaFiltro, setDiaFiltro] = useState<string>(getDiaAtualFormatado());
 
-  // Filtros (Inicializa com o dia atual para facilitar)
-  const [filtroDia, setFiltroDia] = useState<string>(getDiaAtualFormatado());
-  const [filtroHorario, setFiltroHorario] = useState<string>("");
-  const [filtroTurma, setFiltroTurma] = useState<string>("");
+  // --- Estados da Chamada ---
+  const [selectedGroup, setSelectedGroup] = useState<ClassGroup | null>(null);
+  const [presencas, setPresencas] = useState<
+    Record<number, "presente" | "falta" | "justificado">
+  >({});
+  const [showSuccess, setShowSuccess] = useState(false);
 
+  // --- Carregamento Inicial ---
   useEffect(() => {
     loadStudents();
   }, []);
@@ -25,115 +43,278 @@ export default function TelaTurmas() {
     }
   };
 
-  // Função auxiliar para pegar dia da semana atual (Ex: "Seg")
   function getDiaAtualFormatado() {
     const dias = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
-    return dias[new Date().getDay()];
+    const hoje = new Date().getDay();
+    return dias[hoje] === "Dom" ? "Seg" : dias[hoje]; // Se for domingo, joga pra segunda
   }
 
-  // Lógica CORE: Filtra alunos que batem com os critérios
-  const studentsFiltered = useMemo(() => {
-    return students.filter((s) => {
-      // 1. Verifica se o aluno tem o dia selecionado em sua lista de dias
-      // Se não tiver dias definidos, assume que vai todos (opcional) ou nenhum.
-      const bateDia = s.diasSemana ? s.diasSemana.includes(filtroDia) : false;
+  // --- LÓGICA DE AGRUPAMENTO (O segredo da nova tela) ---
+  const turmasDoDia = useMemo(() => {
+    const groups: Record<string, ClassGroup> = {};
 
-      // 2. Verifica horário (se filtro estiver vazio, traz todos os horários do dia)
-      const bateHorario = filtroHorario
-        ? s.horarioAula === filtroHorario
-        : true;
+    students.forEach((aluno) => {
+      // 1. Verifica se o aluno frequenta esse dia
+      const frequentaHoje =
+        aluno.diasSemana && aluno.diasSemana.includes(diaFiltro);
 
-      // 3. Verifica Turma/Modalidade
-      const bateTurma = filtroTurma
-        ? s.turma.toLowerCase().includes(filtroTurma.toLowerCase())
-        : true;
+      if (frequentaHoje) {
+        // AGORA A CHAVE É SÓ O HORÁRIO
+        const horario = aluno.horarioAula || "Sem Horário";
 
-      return bateDia && bateHorario && bateTurma;
+        // Se o horário ainda não existe no grupo, cria
+        if (!groups[horario]) {
+          groups[horario] = {
+            turma: `Treino das ${horario}`, // Nome bonito para o Card
+            horario: horario,
+            totalAlunos: 0,
+            alunos: [],
+          };
+        }
+
+        groups[horario].alunos.push(aluno);
+        groups[horario].totalAlunos++;
+      }
     });
-  }, [students, filtroDia, filtroHorario, filtroTurma]);
+
+    // Retorna array ordenado por horário (Ex: 06:00 vem antes de 19:00)
+    return Object.values(groups).sort((a, b) =>
+      a.horario.localeCompare(b.horario),
+    );
+  }, [students, diaFiltro]);
+  // --- AÇÕES ---
+
+  const handleSelectClass = (group: ClassGroup) => {
+    setSelectedGroup(group);
+    setPresencas({}); // Reseta presenças anteriores
+    setCurrentView("CHAMADA");
+  };
+
+  const handleBackToSelection = () => {
+    setSelectedGroup(null);
+    setCurrentView("SELECAO");
+  };
+
+  const handleMarkPresence = (id: number, status: "presente" | "falta") => {
+    setPresencas((prev) => ({ ...prev, [id]: status }));
+  };
+
+  const handleFinalizar = async () => {
+    if (!selectedGroup) return;
+
+    // Quem não foi marcado recebe "falta" por padrão
+    const registros = selectedGroup.alunos.map((student) => ({
+      studentId: student.id!,
+      status: presencas[student.id!] || "falta",
+    }));
+
+    const payload = {
+      turma: selectedGroup.turma,
+      dataAula: new Date().toISOString().split("T")[0],
+      registros,
+    };
+
+    try {
+      const response = await AttendanceService.save(payload);
+      if (response.success) {
+        setShowSuccess(true);
+        // Não reseta a tela imediatamente para o usuário ver o feedback,
+        // mas quando fechar o popup volta para a seleção
+      } else {
+        alert("Erro ao salvar: " + response.error);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Erro de conexão.");
+    }
+  };
+
+  // --- RENDERIZAÇÃO ---
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header da Tela */}
-      <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex flex-col md:flex-row justify-between items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-serif text-gray-800">
-            Gestão de Turmas
-          </h2>
-          <p className="text-sm text-gray-500">
-            Visualize quem deve comparecer hoje ou em horários específicos.
-          </p>
+    <div className="flex flex-col h-full relative bg-gray-50/30">
+      {/* --- HEADER COMUM --- */}
+      <div className="p-6 border-b border-gray-100 bg-white flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-10 shadow-sm">
+        <div className="flex items-center gap-3">
+          {currentView === "CHAMADA" && (
+            <button
+              onClick={handleBackToSelection}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500"
+            >
+              <span className="text-xl">←</span>
+            </button>
+          )}
+          <div>
+            <h2 className="text-2xl font-serif text-gray-800">
+              {currentView === "SELECAO"
+                ? "Turmas do Dia"
+                : `Chamada: ${selectedGroup?.turma}`}
+            </h2>
+            <p className="text-sm text-gray-500">
+              {currentView === "SELECAO"
+                ? "Selecione uma turma para realizar a chamada."
+                : `${selectedGroup?.horario} • ${selectedGroup?.totalAlunos} Alunos na lista`}
+            </p>
+          </div>
         </div>
 
-        {/* Barra de Filtros */}
-        <div className="flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-gray-200">
-          <select
-            value={filtroDia}
-            onChange={(e) => setFiltroDia(e.target.value)}
-            className="text-sm border-none focus:ring-0 text-gray-700 font-medium bg-transparent cursor-pointer"
-          >
-            {["Seg", "Ter", "Qua", "Qui", "Sex", "Sab"].map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
-          <div className="w-px h-6 bg-gray-200"></div>
-
-          <input
-            type="time"
-            value={filtroHorario}
-            onChange={(e) => setFiltroHorario(e.target.value)}
-            className="text-sm border-none focus:ring-0 text-gray-700 bg-transparent"
-          />
-          <div className="w-px h-6 bg-gray-200"></div>
-
-          <input
-            type="text"
-            placeholder="Filtrar Modalidade..."
-            value={filtroTurma}
-            onChange={(e) => setFiltroTurma(e.target.value)}
-            className="text-sm border-none focus:ring-0 text-gray-700 bg-transparent w-40"
-          />
+        {/* Filtro de Dia (Sempre visível para facilitar troca rápida) */}
+        <div className="flex bg-gray-100 p-1 rounded-lg">
+          {["Seg", "Ter", "Qua", "Qui", "Sex", "Sab"].map((dia) => (
+            <button
+              key={dia}
+              onClick={() => {
+                setDiaFiltro(dia);
+                if (currentView === "CHAMADA") handleBackToSelection(); // Se trocar dia, volta pra seleção
+              }}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                diaFiltro === dia
+                  ? "bg-white text-[#2C2C2C] shadow-sm"
+                  : "text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              {dia}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Conteúdo Principal - Lista */}
-      <div className="flex-1 p-6 overflow-y-auto bg-gray-50/30">
-        {loading ? (
+      {/* --- CONTEÚDO PRINCIPAL --- */}
+      <div className="flex-1 p-6 overflow-y-auto pb-24">
+        {loading && (
           <div className="text-center py-10 text-gray-400">Carregando...</div>
-        ) : studentsFiltered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-            <Icons.Users className="w-12 h-12 mb-3 opacity-20" />
-            <p>Nenhum aluno encontrado para este dia/horário.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {studentsFiltered.map((student) => (
-              <CardChamada key={student.id} student={student} />
+        )}
+
+        {/* VISTA 1: SELEÇÃO DE TURMAS (CARDS) */}
+        {!loading && currentView === "SELECAO" && (
+          <>
+            {turmasDoDia.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+                <div className="w-16 h-16 mb-4 bg-gray-100 rounded-full flex items-center justify-center text-2xl">
+                  📅
+                </div>
+                <p>Nenhuma turma encontrada para {diaFiltro}.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {turmasDoDia.map((grupo) => (
+                  <button
+                    key={`${grupo.turma}-${grupo.horario}`}
+                    onClick={() => handleSelectClass(grupo)}
+                    className="flex flex-col bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-[#8CAB91]/50 hover:-translate-y-1 transition-all duration-300 text-left group"
+                  >
+                    <div className="flex justify-between items-start w-full mb-4">
+                      <div className="bg-[#8CAB91]/10 text-[#8CAB91] p-3 rounded-xl group-hover:bg-[#8CAB91] group-hover:text-white transition-colors">
+                        <Icons.Users />{" "}
+                        {/* Certifique-se que o ícone Users existe ou troque */}
+                      </div>
+                      <span className="text-xs font-bold bg-gray-100 text-gray-600 px-3 py-1 rounded-full">
+                        {grupo.horario}
+                      </span>
+                    </div>
+
+                    <h3 className="text-xl font-bold text-gray-800 mb-1">
+                      {grupo.turma}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {grupo.totalAlunos} alunos esperados
+                    </p>
+
+                    <div className="w-full mt-4 h-1 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-[#8CAB91] w-0 group-hover:w-full transition-all duration-700 ease-out" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* VISTA 2: LISTA DE CHAMADA (ALUNOS) */}
+        {!loading && currentView === "CHAMADA" && selectedGroup && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in-up">
+            {selectedGroup.alunos.map((student) => (
+              <CardChamada
+                key={student.id}
+                student={student}
+                status={presencas[student.id!] || "pendente"}
+                onMark={handleMarkPresence}
+              />
             ))}
           </div>
         )}
       </div>
+
+      {/* --- BOTÃO FLUTUANTE (SÓ NA CHAMADA) --- */}
+      {currentView === "CHAMADA" && (
+        <div className="absolute bottom-6 left-0 right-0 flex justify-center z-20 pointer-events-none">
+          <button
+            onClick={handleFinalizar}
+            className="pointer-events-auto bg-[#2C2C2C] text-white px-8 py-4 rounded-full shadow-2xl shadow-black/30 hover:scale-105 active:scale-95 transition-all font-bold tracking-wide flex items-center gap-3 border-4 border-gray-50"
+          >
+            <Icons.CheckCircle className="w-5 h-5 text-[#8CAB91]" />
+            Confirmar Presenças
+          </button>
+        </div>
+      )}
+
+      {/* --- POPUP DE SUCESSO --- */}
+      {showSuccess && (
+        <Popup
+          onClose={() => {
+            setShowSuccess(false);
+            handleBackToSelection();
+          }}
+        >
+          <div className="text-center py-6 px-4">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600 animate-bounce-slow">
+              <Icons.CheckCircle />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              Chamada Finalizada!
+            </h2>
+            <p className="text-gray-500">
+              A presença da turma <b>{selectedGroup?.turma}</b> das{" "}
+              <b>{selectedGroup?.horario}</b> foi salva com sucesso.
+            </p>
+            <button
+              onClick={() => {
+                setShowSuccess(false);
+                handleBackToSelection();
+              }}
+              className="mt-6 bg-gray-800 text-white px-6 py-2 rounded-lg hover:bg-black transition-colors"
+            >
+              Voltar para Turmas
+            </button>
+          </div>
+        </Popup>
+      )}
     </div>
   );
 }
 
-// Componente visual do Card de Aluno para Chamada
-function CardChamada({ student }: { student: Cadastro }) {
-  const [status, setStatus] = useState<"pendente" | "presente" | "falta">(
-    "pendente",
-  );
+// --- COMPONENTES AUXILIARES ---
 
+function CardChamada({
+  student,
+  status,
+  onMark,
+}: {
+  student: Cadastro;
+  status: string;
+  onMark: (id: number, s: "presente" | "falta") => void;
+}) {
   return (
     <div
       className={`
-      relative p-4 rounded-xl border transition-all duration-300 flex items-center gap-4 group bg-white
-      ${status === "presente" ? "border-[#8CAB91] shadow-lg shadow-[#8CAB91]/10" : "border-gray-100 shadow-sm hover:shadow-md"}
+      relative p-4 rounded-xl border transition-all duration-200 flex items-center gap-4 bg-white
+      ${status === "presente" ? "border-[#8CAB91] bg-[#8CAB91]/5 shadow-sm" : ""}
+      ${status === "falta" ? "border-red-200 bg-red-50/50" : ""}
+      ${status === "pendente" ? "border-gray-100 hover:border-gray-300" : ""}
     `}
     >
-      {/* Foto / Avatar */}
-      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0 border border-gray-100">
+      {/* Foto */}
+      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0 border border-gray-200">
         {student.fotoUrl ? (
           <img
             src={`media://${student.fotoUrl}`}
@@ -141,36 +322,54 @@ function CardChamada({ student }: { student: Cadastro }) {
             className="w-full h-full object-cover"
           />
         ) : (
-          <span className="text-lg font-serif text-gray-400">
+          <span className="text-lg font-bold text-gray-400">
             {student.nome.charAt(0)}
           </span>
         )}
       </div>
 
-      {/* Dados */}
+      {/* Info */}
       <div className="flex-1 min-w-0">
-        <h4 className="font-medium text-gray-800 truncate">{student.nome}</h4>
+        <h4
+          className={`font-semibold truncate transition-colors ${status === "falta" ? "text-gray-400" : "text-gray-800"}`}
+        >
+          {student.nome}
+        </h4>
         <div className="flex items-center gap-2 text-xs text-gray-500">
-          <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-medium">
-            {student.horarioAula || "--:--"}
-          </span>
-          <span className="truncate">{student.turma}</span>
+          {/* Status Label opcional */}
+          {status === "presente" && (
+            <span className="text-[#8CAB91] font-bold">Presente</span>
+          )}
+          {status === "falta" && (
+            <span className="text-red-400 font-bold">Falta</span>
+          )}
+          {status === "pendente" && <span>Aguardando...</span>}
         </div>
       </div>
 
-      {/* Ações de Chamada */}
-      <div className="flex flex-col gap-1">
+      {/* Botões */}
+      <div className="flex items-center gap-2">
         <button
-          onClick={() => setStatus("presente")}
-          className={`p-2 rounded-lg transition-colors ${status === "presente" ? "bg-[#8CAB91] text-white" : "text-gray-300 hover:bg-[#8CAB91]/10 hover:text-[#8CAB91]"}`}
+          onClick={() => onMark(student.id!, "presente")}
+          title="Marcar Presença"
+          className={`p-2 rounded-lg transition-all ${
+            status === "presente"
+              ? "bg-[#8CAB91] text-white shadow-md scale-110"
+              : "bg-gray-50 text-gray-300 hover:bg-[#8CAB91]/20 hover:text-[#8CAB91]"
+          }`}
         >
-          <Icons.CheckCircle className="w-5 h-5" />
+          <Icons.CheckCircle />
         </button>
         <button
-          onClick={() => setStatus("falta")}
-          className={`p-2 rounded-lg transition-colors ${status === "falta" ? "bg-red-100 text-red-500" : "text-gray-300 hover:bg-red-50 hover:text-red-500"}`}
+          onClick={() => onMark(student.id!, "falta")}
+          title="Marcar Falta"
+          className={`p-2 rounded-lg transition-all ${
+            status === "falta"
+              ? "bg-red-500 text-white shadow-md scale-110"
+              : "bg-gray-50 text-gray-300 hover:bg-red-100 hover:text-red-500"
+          }`}
         >
-          <Icons.XCircle className="w-5 h-5" />
+          <Icons.XCircle />
         </button>
       </div>
     </div>
