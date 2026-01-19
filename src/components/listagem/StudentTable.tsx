@@ -4,9 +4,10 @@ import { Icons } from "../common/Icons";
 interface Props {
   students: Cadastro[];
   loading: boolean;
+  onSelect: (student: Cadastro) => void; // Nova prop para lidar com o clique
 }
 
-export default function StudentTable({ students, loading }: Props) {
+export default function StudentTable({ students, loading, onSelect }: Props) {
   // Helpers internos para formatação visual
   const getInitials = (name: string) => {
     const parts = name.trim().split(" ");
@@ -20,10 +21,6 @@ export default function StudentTable({ students, loading }: Props) {
     if (dia <= 10) return "bg-[#8CAB91]/20 text-[#5A7A60] border-[#8CAB91]/30"; // Verde Suave
     if (dia <= 20) return "bg-stone-100 text-stone-600 border-stone-200"; // Neutro (Pedra)
     return "bg-amber-50 text-amber-700 border-amber-100"; // Alerta suave
-  };
-  const getImageSrc = (path?: string | null) => {
-    if (!path) return null;
-    return `file:///${path.replace(/\\/g, "/")}`;
   };
 
   return (
@@ -72,7 +69,8 @@ export default function StudentTable({ students, loading }: Props) {
               students.map((student, index) => (
                 <tr
                   key={index}
-                  className="group hover:bg-[#8CAB91]/5 transition-colors border-b border-stone-50 last:border-0"
+                  onClick={() => onSelect(student)} // Ao clicar na linha, chama a função de seleção
+                  className="group hover:bg-[#8CAB91]/5 transition-colors border-b border-stone-50 last:border-0 cursor-pointer relative"
                 >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
@@ -88,7 +86,6 @@ export default function StudentTable({ students, loading }: Props) {
                                 "Falha no HTML ao ler:",
                                 `media://${student.fotoUrl}`,
                               );
-                              e.currentTarget.style.display = "none";
                               e.currentTarget.style.display = "none";
                             }}
                           />
@@ -130,7 +127,13 @@ export default function StudentTable({ students, loading }: Props) {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <button className="p-2 text-stone-400 hover:text-[#8CAB91] hover:bg-[#8CAB91]/10 rounded-full transition-all opacity-0 group-hover:opacity-100">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation(); // Impede que o clique no botão abra o modal
+                        // Aqui você pode adicionar lógica para um menu de ações específico se necessário
+                      }}
+                      className="p-2 text-stone-400 hover:text-[#8CAB91] hover:bg-[#8CAB91]/10 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                    >
                       <Icons.More />
                     </button>
                   </td>

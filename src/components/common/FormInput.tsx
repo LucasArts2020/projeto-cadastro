@@ -1,6 +1,5 @@
 import { ComponentProps, useEffect, useState } from "react";
 
-// Ícone de Câmera para o botão de upload
 const CameraIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -48,6 +47,7 @@ interface FormInputProps<T> extends Omit<
   onChange: (name: keyof T, value: T[keyof T]) => void;
   options?: SelectOption[];
   className?: string;
+  currentPhotoUrl?: string; // <--- O SEGREDO ESTÁ AQUI (Nova Propriedade)
 }
 
 export default function FormInput<T>({
@@ -58,23 +58,18 @@ export default function FormInput<T>({
   onChange,
   options = [],
   className = "",
+  currentPhotoUrl, // <--- RECEBE A URL
   ...props
 }: FormInputProps<T>) {
-  // 1. Estado local para garantir que o preview apareça
   const [preview, setPreview] = useState<string | null>(null);
 
-  // 2. Efeito Inteligente: Monitora quando o "value" (o arquivo) muda
   useEffect(() => {
     if (type === "file") {
       if (value && (value as any) instanceof File) {
-        // Se for um arquivo novo (upload), cria a URL
         const objectUrl = URL.createObjectURL(value as any);
         setPreview(objectUrl);
-
-        // Limpeza de memória (importante para não travar o navegador)
         return () => URL.revokeObjectURL(objectUrl);
       } else {
-        // Se não tiver arquivo, limpa o preview
         setPreview(null);
       }
     }
@@ -83,53 +78,45 @@ export default function FormInput<T>({
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) {
-    // Tratamento para Arquivos
     if (type === "file") {
       const input = e.target as HTMLInputElement;
       const file = input.files?.[0] ?? null;
       onChange(name, file as T[keyof T]);
       return;
     }
-
-    // Tratamento para Números
     if (type === "number") {
       const val = e.target.value === "" ? 0 : Number(e.target.value);
       onChange(name, val as T[keyof T]);
       return;
     }
-
-    // Padrão
     onChange(name, e.target.value as T[keyof T]);
   }
 
   const safeValue = type === "file" ? undefined : ((value as any) ?? "");
-
-  // ESTILO DOS INPUTS
   const inputStyle =
     "border border-stone-200 rounded-3xl px-5 py-3 bg-[#F9F9F9] text-stone-700 focus:ring-2 focus:ring-[#8CAB91]/50 focus:border-[#8CAB91] outline-none transition-all w-full placeholder-stone-400 shadow-sm";
 
-  // --- RENDERIZAÇÃO ESPECIAL PARA FOTO (Com Preview) ---
+  // Lógica: Mostra o Preview (Novo) OU a Foto Atual (Banco)
+  const imageToShow = preview || currentPhotoUrl;
+
   if (type === "file") {
     return (
       <div
         className={`flex flex-col items-center justify-center py-4 ${className}`}
       >
         <label className="group cursor-pointer flex flex-col items-center justify-center relative">
-          {/* Círculo da Foto */}
           <div className="w-24 h-24 rounded-full bg-white border-2 border-dashed border-[#8CAB91] flex items-center justify-center text-[#8CAB91] shadow-md group-hover:bg-[#8CAB91] group-hover:text-white group-hover:border-transparent transition-all duration-300 transform group-hover:scale-105 overflow-hidden relative">
-            {/* Se tiver preview, mostra a imagem. Se não, o ícone. */}
-            {preview ? (
+            {imageToShow ? (
               <img
-                src={preview}
-                alt="Preview"
+                src={imageToShow}
+                alt="Foto"
                 className="w-full h-full object-cover"
               />
             ) : (
               <CameraIcon />
             )}
 
-            {/* Overlay: Aparece ao passar o mouse se já tiver foto */}
-            {preview && (
+            {imageToShow && (
               <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                 <span className="text-white text-xs font-bold">TROCAR</span>
               </div>
@@ -137,7 +124,7 @@ export default function FormInput<T>({
           </div>
 
           <span className="mt-3 text-xs font-bold text-[#8CAB91] uppercase tracking-widest group-hover:text-[#2C3A30] transition-colors">
-            {value ? "Alterar Foto" : label}
+            {value || currentPhotoUrl ? "Alterar Foto" : label}
           </span>
 
           <input
@@ -153,13 +140,11 @@ export default function FormInput<T>({
     );
   }
 
-  // --- RENDERIZAÇÃO PADRÃO ---
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
       <label className="text-xs font-bold text-stone-500 uppercase tracking-wider ml-4">
         {label}
       </label>
-
       {type === "select" ? (
         <select
           name={String(name)}
