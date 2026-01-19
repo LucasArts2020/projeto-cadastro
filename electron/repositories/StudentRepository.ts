@@ -149,4 +149,37 @@ export class StudentRepository {
 
     return filePath;
   }
+  update(student: any) {
+    const db = this.dbManager.getInstance();
+
+    const stmt = `
+      UPDATE students 
+      SET 
+        nome = '${student.nome}',
+        rg = '${student.rg}',
+        cpf = '${student.cpf}',
+        data_nascimento = '${student.dataNascimento}',
+        telefone = '${student.telefone}',
+        telefone2 = '${student.telefone2}',
+        endereco = '${student.endereco}',
+        turma = '${student.turma}',
+        dias_semana = '${JSON.stringify(student.diasSemana)}',
+        horario_aula = '${student.horarioAula}',
+        valor_matricula = ${student.valorMatricula},
+        plano_mensal = '${student.planoMensal}',
+        valor_mensalidade = ${student.valorMensalidade},
+        forma_pagamento = '${student.formaPagamento}',
+        dia_vencimento = ${student.diaVencimento || "NULL"},
+        foto_url = '${student.fotoUrl || ""}'
+      WHERE id = ${student.id}
+    `;
+
+    try {
+      db.exec(stmt);
+      return { success: true };
+    } catch (error) {
+      console.error("Erro ao atualizar aluno:", error);
+      throw error;
+    }
+  }
 }

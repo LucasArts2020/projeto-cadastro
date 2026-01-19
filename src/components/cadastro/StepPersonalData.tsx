@@ -1,4 +1,3 @@
-// src/components/cadastro/StepPersonalData.tsx
 import FormInput from "../common/FormInput";
 import { Cadastro } from "../../types/typeCadastro";
 
@@ -15,8 +14,20 @@ export default function StepPersonalData({ data, onChange }: Props) {
           Quem é o aluno?
         </h3>
         <p className="text-sm text-gray-500">
-          Preencha os dados de identificação.
+          Preencha os dados de identificação e escolha uma foto.
         </p>
+      </div>
+
+      {/* --- MUDANÇA AQUI: Input de Foto Atualizado --- */}
+      {/* Removemos a div azul antiga e usamos o FormInput direto */}
+      <div className="col-span-2 flex justify-center mb-4">
+        <FormInput<Cadastro>
+          label="Foto do Perfil"
+          name="fotoFile" // Corrigido: Salva no campo de Arquivo
+          type="file"
+          value={data.fotoFile} // Importante: Passa o valor para gerar o preview
+          onChange={onChange}
+        />
       </div>
 
       <FormInput<Cadastro>
@@ -28,6 +39,7 @@ export default function StepPersonalData({ data, onChange }: Props) {
         autoFocus
         placeholder="Ex: João da Silva"
       />
+
       <FormInput<Cadastro>
         label="CPF"
         name="cpf"
@@ -35,12 +47,14 @@ export default function StepPersonalData({ data, onChange }: Props) {
         onChange={onChange}
         placeholder="000.000.000-00"
       />
+
       <FormInput<Cadastro>
         label="RG"
         name="rg"
         value={data.rg}
         onChange={onChange}
       />
+
       <FormInput<Cadastro>
         label="Data de Nascimento"
         name="dataNascimento"
@@ -48,6 +62,7 @@ export default function StepPersonalData({ data, onChange }: Props) {
         value={data.dataNascimento}
         onChange={onChange}
       />
+
       <FormInput<Cadastro>
         label="Telefone / WhatsApp"
         name="telefone"
@@ -55,6 +70,7 @@ export default function StepPersonalData({ data, onChange }: Props) {
         onChange={onChange}
         placeholder="(00) 00000-0000"
       />
+
       <FormInput<Cadastro>
         label="Telefone Recado"
         name="telefone2"
@@ -62,6 +78,7 @@ export default function StepPersonalData({ data, onChange }: Props) {
         onChange={onChange}
         placeholder="(00) 0000-0000"
       />
+
       <FormInput<Cadastro>
         label="Endereço Completo"
         name="endereco"
@@ -70,17 +87,6 @@ export default function StepPersonalData({ data, onChange }: Props) {
         className="col-span-2"
         placeholder="Rua, Número, Bairro"
       />
-
-      <div className="col-span-2 bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex items-center gap-4">
-        <div className="bg-indigo-200 p-2 rounded-full text-indigo-700">📷</div>
-        <FormInput<Cadastro>
-          label="Foto do Perfil (Opcional)"
-          name="fotoUrl"
-          type="file"
-          onChange={onChange}
-          className="flex-1"
-        />
-      </div>
     </div>
   );
 }

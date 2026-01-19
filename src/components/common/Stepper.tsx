@@ -7,7 +7,7 @@ interface Props {
 export default function Stepper({ currentStep }: Props) {
   const steps = [
     { id: 1, label: "Pessoal" },
-    { id: 2, label: "Frequência" }, // Nova etapa
+    { id: 2, label: "Frequência" }, // Nova etapa funcionando!
     { id: 3, label: "Financeiro" },
   ];
 
@@ -17,9 +17,16 @@ export default function Stepper({ currentStep }: Props) {
         {steps.map((step, index) => {
           const isActive = currentStep === step.id;
           const isCompleted = currentStep > step.id;
+          const isLast = index === steps.length - 1;
 
           return (
-            <div key={step.id} className="flex-1 flex items-center">
+            <div
+              key={step.id}
+              // CORREÇÃO DE LAYOUT:
+              // O último item NÃO deve ter flex-1, senão ele empurra tudo para a esquerda.
+              // Os outros devem ter flex-1 para esticar a linha conectora.
+              className={`flex items-center ${isLast ? "" : "flex-1"}`}
+            >
               {/* Bolinha do Passo */}
               <div className="relative flex flex-col items-center group">
                 <div
@@ -38,6 +45,8 @@ export default function Stepper({ currentStep }: Props) {
                     <span className="font-bold text-sm">{step.id}</span>
                   )}
                 </div>
+
+                {/* Label */}
                 <span
                   className={`absolute -bottom-6 text-xs font-medium tracking-wide whitespace-nowrap transition-colors duration-300 ${
                     isActive ? "text-[#8CAB91]" : "text-gray-400"
@@ -48,7 +57,7 @@ export default function Stepper({ currentStep }: Props) {
               </div>
 
               {/* Linha Conectora (não mostra no último item) */}
-              {index !== steps.length - 1 && (
+              {!isLast && (
                 <div className="flex-1 h-0.5 mx-4 bg-gray-100 relative overflow-hidden rounded-full">
                   <div
                     className={`absolute inset-0 bg-[#8CAB91] transition-all duration-500 ease-out ${

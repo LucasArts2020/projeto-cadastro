@@ -126,3 +126,10 @@ ipcMain.handle("get-class-details", (event, classId) => {
 ipcMain.handle("get-attendance-history", (event, filters) => {
   return attendanceRepo.getHistory(filters);
 });
+ipcMain.handle("save-image", (_, file) => {
+  return studentRepo.saveImg(file);
+});
+
+ipcMain.handle("update-aluno", (event, dados) => {
+  return studentRepo.update(dados);
+});
