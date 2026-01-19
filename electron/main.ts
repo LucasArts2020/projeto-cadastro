@@ -1,8 +1,8 @@
 import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent } from "electron";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import iniciarBanco from "./sql/dbManager";
 import path from "node:path";
-import fs from "node:fs";
 
 // --- 1. ATUALIZAÇÃO DA INTERFACE (Adicionado diasSemana e horarioAula) ---
 interface Student {
@@ -65,86 +65,6 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
 
 let db: Database | null = null;
 const dbPath = path.join(process.env.APP_ROOT, "dados.sqlite");
-
-async function iniciarBanco(): Promise<void> {
-  try {
-    const wasmPath = path.join(
-      process.env.APP_ROOT,
-      "node_modules",
-      "sql.js",
-      "dist",
-      "sql-wasm.wasm",
-    );
-
-    const wasmBuffer = fs.readFileSync(wasmPath);
-
-    const SQL = await initSqlJs({
-      wasmBinary: wasmBuffer,
-    });
-
-    if (fs.existsSync(dbPath)) {
-      const fileBuffer = fs.readFileSync(dbPath);
-      db = new SQL.Database(fileBuffer) as Database;
-      console.log("Banco de dados carregado com sucesso.");
-    } else {
-      db = new SQL.Database() as Database;
-
-      // --- 2. CRIAÇÃO DAS TABELAS COM OS NOVOS CAMPOS ---
-      db?.run(`
-        CREATE TABLE IF NOT EXISTS students (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          nome TEXT NOT NULL,
-          rg TEXT,
-          cpf TEXT UNIQUE NOT NULL,
-          dataNascimento TEXT NOT NULL,
-          telefone TEXT NOT NULL,
-          telefoneEmergencia TEXT NOT NULL,
-          endereco TEXT NOT NULL,
-          foto TEXT,
-          turma TEXT NOT NULL,
-          valorMatricula REAL NOT NULL,
-          planoMensal TEXT NOT NULL,
-          valorMensalidade REAL NOT NULL,
-          formaPagamento TEXT NOT NULL,
-          diaVencimento INTEGER NOT NULL,
-          
-          -- NOVOS CAMPOS ADICIONADOS AQUI:
-          diasSemana TEXT,  -- Salvará o JSON (ex: '["Seg", "Qua"]')
-          horarioAula TEXT, -- Salvará o horário (ex: '19:00')
-
-          createdAt TEXT DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE IF NOT EXISTS classes (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          turma TEXT NOT NULL,
-          data_aula TEXT NOT NULL,
-          descricao TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS attendance (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          student_id INTEGER NOT NULL,
-          class_id INTEGER NOT NULL,
-          status TEXT CHECK(status IN ('presente', 'falta', 'justificado')) NOT NULL,
-          FOREIGN KEY (student_id) REFERENCES students(id),
-          FOREIGN KEY (class_id) REFERENCES classes(id)
-        );
-      `);
-      salvarBanco();
-      console.log("Novo banco de dados criado.");
-    }
-  } catch (err: unknown) {
-    console.error("ERRO CRÍTICO NO BANCO:", err);
-  }
-}
-
-function salvarBanco(): void {
-  if (!db) return;
-  const data = db.export();
-  const buffer = Buffer.from(data);
-  fs.writeFileSync(dbPath, buffer);
-}
 
 let win: BrowserWindow | null;
 
