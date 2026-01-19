@@ -6,6 +6,7 @@ import Popup from "../components/layout/popup";
 import Stepper from "../components/common/Stepper";
 import StepPersonalData from "../components/cadastro/StepPersonalData";
 import StepFinancialData from "../components/cadastro/StepFinancialData";
+import StepPresenceData from "../components/cadastro/StepPresenceData"; // Importe o novo step
 import FormActions from "../components/cadastro/FormActions";
 
 interface Props {
@@ -25,7 +26,6 @@ export default function TelaCadastro({ onSuccess }: Props) {
     key: 0,
   });
 
-  // 1. INICIALIZAÇÃO DO ESTADO COM OS NOVOS CAMPOS
   const [cadastroDados, setCadastroDados] = useState<Cadastro>({
     nome: "",
     rg: "",
@@ -41,8 +41,8 @@ export default function TelaCadastro({ onSuccess }: Props) {
     valorMensalidade: 0,
     formaPagamento: "",
     diaVencimento: "",
-    diasSemana: [], // Novo: Array vazio
-    horarioAula: "", // Novo: String vazia
+    diasSemana: [],
+    horarioAula: "",
   });
 
   function handleChange(name: keyof Cadastro, value: any) {
@@ -53,17 +53,33 @@ export default function TelaCadastro({ onSuccess }: Props) {
     }));
   }
 
+  // Controle de validação e avanço de etapas
   const proximaEtapa = () => {
-    if (!cadastroDados.nome || !cadastroDados.cpf) {
-      setShowPopup({ open: true, key: 1 });
+    // Validação Passo 1
+    if (etapa === 1) {
+      if (!cadastroDados.nome || !cadastroDados.cpf) {
+        setShowPopup({ open: true, key: 1 });
+        return;
+      }
+      setEtapa(2);
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-    setEtapa(2);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    // Validação Passo 2 (Opcional: Exigir Turma?)
+    if (etapa === 2) {
+      if (!cadastroDados.turma) {
+        // Se quiser obrigar a ter turma, descomente abaixo ou crie um popup novo
+        // alert("Preencha a turma!");
+        // return;
+      }
+      setEtapa(3);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const etapaAnterior = () => {
-    setEtapa(1);
+    setEtapa((prev) => prev - 1);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -74,8 +90,7 @@ export default function TelaCadastro({ onSuccess }: Props) {
 
       setTimeout(() => {
         setShowPopup({ open: true, key: 2 });
-
-        // 2. RESET DO FORMULÁRIO APÓS SUCESSO
+        // Reset total
         setCadastroDados({
           nome: "",
           rg: "",
@@ -91,10 +106,9 @@ export default function TelaCadastro({ onSuccess }: Props) {
           valorMensalidade: 0,
           formaPagamento: "",
           diaVencimento: "",
-          diasSemana: [], // Resetar dias
-          horarioAula: "", // Resetar horário
+          diasSemana: [],
+          horarioAula: "",
         });
-
         setEtapa(1);
         setIsLoading(false);
         if (onSuccess) onSuccess();
@@ -106,27 +120,41 @@ export default function TelaCadastro({ onSuccess }: Props) {
     }
   }
 
+  // Renderização condicional dos Steps
+  const renderStep = () => {
+    switch (etapa) {
+      case 1:
+        return (
+          <StepPersonalData data={cadastroDados} onChange={handleChange} />
+        );
+      case 2:
+        return (
+          <StepPresenceData data={cadastroDados} onChange={handleChange} />
+        );
+      case 3:
+        return (
+          <StepFinancialData data={cadastroDados} onChange={handleChange} />
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       <Stepper currentStep={etapa} />
 
-      <div className="p-8 bg-white min-h-100">
-        {etapa === 1 ? (
-          <StepPersonalData data={cadastroDados} onChange={handleChange} />
-        ) : (
-          <StepFinancialData data={cadastroDados} onChange={handleChange} />
-        )}
-      </div>
+      <div className="p-8 bg-white min-h-100">{renderStep()}</div>
 
-      {/* Área de Popups */}
+      {/* Popups (Mantidos iguais) */}
       <div>
         {showPopup.open && showPopup.key === 1 && (
           <Popup onClose={() => setShowPopup({ open: false, key: 0 })}>
             <h2 className="text-lg font-semibold mb-2">
-              Preencha os campos obrigatórios
+              Preencha os dados pessoais
             </h2>
             <p className="text-sm text-gray-500">
-              Nome e CPF são necessários para avançar.
+              Nome e CPF são obrigatórios.
             </p>
           </Popup>
         )}
@@ -143,9 +171,7 @@ export default function TelaCadastro({ onSuccess }: Props) {
         {showPopup.open && showPopup.key === 3 && (
           <Popup onClose={() => setShowPopup({ open: false, key: 0 })}>
             <h2 className="text-lg font-semibold mb-2 text-red-600">Erro</h2>
-            <p className="text-sm text-gray-500">
-              Não foi possível salvar o cadastro.
-            </p>
+            <p className="text-sm text-gray-500">Não foi possível salvar.</p>
           </Popup>
         )}
       </div>

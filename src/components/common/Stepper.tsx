@@ -1,83 +1,65 @@
-const CheckIcon = () => (
-  <svg
-    className="w-5 h-5 text-white"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={3}
-  >
-    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-  </svg>
-);
+import { Icons } from "./Icons";
 
-const StepIndicator = ({
-  num,
-  title,
-  current,
-}: {
-  num: number;
-  title: string;
-  current: number;
-}) => {
-  const isActive = current === num;
-  const isCompleted = current > num;
-
-  return (
-    <div className="flex flex-col items-center relative z-10">
-      <div
-        className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-500 ${
-          isActive
-            ? "bg-[#8CAB91] border-[#8CAB91] text-white shadow-lg shadow-[#8CAB91]/30 scale-110" // Etapa Atual (Sálvia)
-            : isCompleted
-              ? "bg-[#2C3A30] border-[#2C3A30] text-white" // Etapa Concluída (Verde Escuro)
-              : "bg-white border-stone-200 text-stone-300" // Inativo
-        }`}
-      >
-        {isCompleted ? (
-          <CheckIcon />
-        ) : (
-          <span
-            className={`font-serif font-bold text-sm ${isActive ? "text-white" : ""}`}
-          >
-            {num}
-          </span>
-        )}
-      </div>
-      <span
-        className={`mt-3 text-[10px] font-bold uppercase tracking-widest transition-colors duration-300 ${
-          isActive
-            ? "text-[#8CAB91]"
-            : isCompleted
-              ? "text-[#2C3A30]"
-              : "text-stone-400"
-        }`}
-      >
-        {title}
-      </span>
-    </div>
-  );
-};
-
-interface StepperProps {
+interface Props {
   currentStep: number;
 }
 
-export default function Stepper({ currentStep }: StepperProps) {
+export default function Stepper({ currentStep }: Props) {
+  const steps = [
+    { id: 1, label: "Pessoal" },
+    { id: 2, label: "Frequência" }, // Nova etapa
+    { id: 3, label: "Financeiro" },
+  ];
+
   return (
-    <div className="bg-white px-8 py-8 border-b border-stone-100 flex justify-center relative">
-      {/* Linha de Fundo (Cinza Claro) */}
-      <div className="absolute top-12 left-1/4 right-1/4 h-px bg-stone-200 z-0"></div>
+    <div className="flex items-center justify-center py-6 bg-white border-b border-gray-100">
+      <div className="flex items-center w-full max-w-2xl px-8">
+        {steps.map((step, index) => {
+          const isActive = currentStep === step.id;
+          const isCompleted = currentStep > step.id;
 
-      {/* Linha de Progresso (Verde Sálvia) */}
-      <div
-        className={`absolute top-12 left-1/4 h-px bg-[#8CAB91] z-0 transition-all duration-700 ease-in-out ${
-          currentStep === 2 ? "w-1/2" : "w-0"
-        }`}
-      ></div>
+          return (
+            <div key={step.id} className="flex-1 flex items-center">
+              {/* Bolinha do Passo */}
+              <div className="relative flex flex-col items-center group">
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 z-10 
+                  ${
+                    isActive
+                      ? "border-[#8CAB91] bg-[#8CAB91] text-white shadow-lg shadow-[#8CAB91]/30 scale-110"
+                      : isCompleted
+                        ? "border-[#8CAB91] bg-[#8CAB91] text-white"
+                        : "border-gray-200 bg-white text-gray-400"
+                  }`}
+                >
+                  {isCompleted ? (
+                    <Icons.CheckCircle className="w-5 h-5" />
+                  ) : (
+                    <span className="font-bold text-sm">{step.id}</span>
+                  )}
+                </div>
+                <span
+                  className={`absolute -bottom-6 text-xs font-medium tracking-wide whitespace-nowrap transition-colors duration-300 ${
+                    isActive ? "text-[#8CAB91]" : "text-gray-400"
+                  }`}
+                >
+                  {step.label}
+                </span>
+              </div>
 
-      <div className="flex justify-between w-full max-w-md">
-        <StepIndicator num={1} title="Dados Pessoais" current={currentStep} />
-        <StepIndicator num={2} title="Matrícula" current={currentStep} />
+              {/* Linha Conectora (não mostra no último item) */}
+              {index !== steps.length - 1 && (
+                <div className="flex-1 h-0.5 mx-4 bg-gray-100 relative overflow-hidden rounded-full">
+                  <div
+                    className={`absolute inset-0 bg-[#8CAB91] transition-all duration-500 ease-out ${
+                      isCompleted ? "w-full" : "w-0"
+                    }`}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
