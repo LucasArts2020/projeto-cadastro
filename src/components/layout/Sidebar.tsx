@@ -62,6 +62,16 @@ export default function Sidebar() {
           {/* Importe Calendar no Icons.tsx ou use um existente */}
           <span>Turmas</span>
         </NavLink>
+        <NavLink
+          to="/historico"
+          className={({ isActive }) =>
+            `${linkClass} ${isActive ? activeClass : inactiveClass}`
+          }
+        >
+          <Icons.FileText />{" "}
+          {/* Se não tiver FileText, use Icons.Filter ou similar */}
+          <span>Histórico</span>
+        </NavLink>
       </nav>
 
       {/* Footer Sidebar */}

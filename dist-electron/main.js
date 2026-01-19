@@ -179,6 +179,120 @@ class StudentRepository {
     }
   }
 }
+class AttendanceRepository {
+  dbManager;
+  constructor(dbManager2) {
+    this.dbManager = dbManager2;
+  }
+  save(data) {
+    const db = this.dbManager.getInstance();
+    try {
+      db.exec("BEGIN TRANSACTION");
+      const stmtClass = db.prepare(
+        "INSERT INTO classes (turma, data_aula) VALUES ($turma, $data_aula)"
+      );
+      stmtClass.run({
+        $turma: data.turma || "Geral",
+        $data_aula: data.dataAula
+      });
+      const result = db.exec("SELECT last_insert_rowid() as id");
+      const classId = result[0].values[0][0];
+      stmtClass.free();
+      const stmtAttendance = db.prepare(
+        "INSERT INTO attendance (student_id, class_id, status) VALUES ($studentId, $classId, $status)"
+      );
+      data.registros.forEach((reg) => {
+        stmtAttendance.run({
+          $studentId: reg.studentId,
+          $classId: classId,
+          $status: reg.status
+        });
+      });
+      stmtAttendance.free();
+      db.exec("COMMIT");
+      this.dbManager.save();
+      return { success: true };
+    } catch (error) {
+      db.exec("ROLLBACK");
+      console.error("Erro ao salvar chamada:", error);
+      return { success: false, error: error.message };
+    }
+  }
+  getHistory(filters) {
+    const db = this.dbManager.getInstance();
+    try {
+      let query = `
+        SELECT 
+          c.id, 
+          c.turma, 
+          c.data_aula, 
+          COUNT(a.id) as total_alunos,
+          SUM(CASE WHEN a.status = 'presente' THEN 1 ELSE 0 END) as presentes
+        FROM classes c
+        LEFT JOIN attendance a ON c.id = a.class_id
+      `;
+      const conditions = [];
+      if (filters?.startDate) {
+        conditions.push(`c.data_aula >= '${filters.startDate}'`);
+      }
+      if (filters?.endDate) {
+        conditions.push(`c.data_aula <= '${filters.endDate}'`);
+      }
+      if (conditions.length > 0) {
+        query += " WHERE " + conditions.join(" AND ");
+      }
+      query += `
+        GROUP BY c.id
+        ORDER BY c.data_aula DESC, c.id DESC
+      `;
+      const result = db.exec(query);
+      if (result.length === 0) return [];
+      const columns = result[0].columns;
+      const values = result[0].values;
+      return values.map((row) => {
+        const obj = {};
+        columns.forEach((col, i) => {
+          obj[col] = row[i];
+        });
+        return obj;
+      });
+    } catch (error) {
+      console.error("Erro ao buscar histórico:", error);
+      return [];
+    }
+  }
+  getClassDetails(classId) {
+    const db = this.dbManager.getInstance();
+    try {
+      const result = db.exec(`
+        SELECT 
+          s.id, s.nome, s.foto, a.status 
+        FROM attendance a
+        JOIN students s ON a.student_id = s.id
+        WHERE a.class_id = ${classId}
+        ORDER BY s.nome ASC
+      `);
+      if (result.length === 0) return [];
+      const columns = result[0].columns;
+      const values = result[0].values;
+      return values.map((row) => {
+        const obj = {};
+        columns.forEach((col, i) => {
+          obj[col] = row[i];
+        });
+        return {
+          studentId: obj.id,
+          nome: obj.nome,
+          fotoUrl: obj.foto,
+          status: obj.status
+        };
+      });
+    } catch (error) {
+      console.error("Erro ao buscar detalhes da aula:", error);
+      return [];
+    }
+  }
+}
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -187,6 +301,7 @@ const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
 const dbManager = new DatabaseManager(process.env.APP_ROOT);
 const studentRepo = new StudentRepository(dbManager);
+const attendanceRepo = new AttendanceRepository(dbManager);
 let win;
 function createWindow() {
   win = new BrowserWindow({
@@ -221,6 +336,15 @@ ipcMain.handle("get-alunos", () => {
 });
 ipcMain.handle("add-aluno", (event, dados) => {
   return studentRepo.create(dados);
+});
+ipcMain.handle("save-attendance", (event, data) => {
+  return attendanceRepo.save(data);
+});
+ipcMain.handle("get-class-details", (event, classId) => {
+  return attendanceRepo.getClassDetails(classId);
+});
+ipcMain.handle("get-attendance-history", (event, filters) => {
+  return attendanceRepo.getHistory(filters);
 });
 export {
   MAIN_DIST,

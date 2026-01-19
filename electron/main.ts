@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { DatabaseManager } from "./database/DatabaseManager";
 import { StudentRepository } from "./repositories/StudentRepository";
-
+import { AttendanceRepository } from "./repositories/AttendanceRepository";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 process.env.APP_ROOT = path.join(__dirname, "..");
@@ -18,6 +18,8 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
 const dbManager = new DatabaseManager(process.env.APP_ROOT);
 
 const studentRepo = new StudentRepository(dbManager);
+
+const attendanceRepo = new AttendanceRepository(dbManager);
 
 let win: BrowserWindow | null;
 
@@ -60,4 +62,16 @@ ipcMain.handle("get-alunos", () => {
 
 ipcMain.handle("add-aluno", (event, dados) => {
   return studentRepo.create(dados);
+});
+
+ipcMain.handle("save-attendance", (event, data) => {
+  return attendanceRepo.save(data);
+});
+
+ipcMain.handle("get-class-details", (event, classId) => {
+  return attendanceRepo.getClassDetails(classId);
+});
+// Procure o handler existente e atualize:
+ipcMain.handle("get-attendance-history", (event, filters) => {
+  return attendanceRepo.getHistory(filters);
 });
