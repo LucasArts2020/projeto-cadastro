@@ -362,9 +362,7 @@ app.whenReady().then(async () => {
         filePath = filePath[0] + ":" + filePath.slice(1);
       }
       const finalizedPath = path.normalize(filePath);
-      console.log("Caminho Processado:", finalizedPath);
       if (!fs.existsSync(finalizedPath)) {
-        console.error(`[ERRO CRÍTICO] Arquivo não existe: ${finalizedPath}`);
         return new Response("Arquivo não encontrado", { status: 404 });
       }
       return net.fetch(pathToFileURL(finalizedPath).toString());
@@ -390,6 +388,9 @@ ipcMain.handle("get-class-details", (event, classId) => {
 });
 ipcMain.handle("get-attendance-history", (event, filters) => {
   return attendanceRepo.getHistory(filters);
+});
+ipcMain.handle("save-image", (_, file) => {
+  return studentRepo.saveImg(file);
 });
 export {
   MAIN_DIST,
