@@ -7,10 +7,9 @@ interface Props {
 }
 
 export default function StepPersonalData({ data, onChange }: Props) {
-  // Função para formatar o caminho da imagem corretamente
   const getPhotoUrl = () => {
     if (!data.fotoUrl) return undefined;
-    // Substitui barras invertidas por barras normais para não quebrar o HTML
+
     const cleanPath = data.fotoUrl.replace(/\\/g, "/");
     return `media://${cleanPath}`;
   };
@@ -33,7 +32,7 @@ export default function StepPersonalData({ data, onChange }: Props) {
           type="file"
           value={data.fotoFile}
           onChange={onChange}
-          currentPhotoUrl={getPhotoUrl()} // <--- ESTA LINHA É QUE FAZ A MÁGICA
+          currentPhotoUrl={getPhotoUrl()}
         />
       </div>
 

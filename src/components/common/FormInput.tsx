@@ -47,7 +47,7 @@ interface FormInputProps<T> extends Omit<
   onChange: (name: keyof T, value: T[keyof T]) => void;
   options?: SelectOption[];
   className?: string;
-  currentPhotoUrl?: string; // <--- O SEGREDO ESTÁ AQUI (Nova Propriedade)
+  currentPhotoUrl?: string;
 }
 
 export default function FormInput<T>({
@@ -58,7 +58,7 @@ export default function FormInput<T>({
   onChange,
   options = [],
   className = "",
-  currentPhotoUrl, // <--- RECEBE A URL
+  currentPhotoUrl,
   ...props
 }: FormInputProps<T>) {
   const [preview, setPreview] = useState<string | null>(null);
@@ -96,7 +96,6 @@ export default function FormInput<T>({
   const inputStyle =
     "border border-stone-200 rounded-3xl px-5 py-3 bg-[#F9F9F9] text-stone-700 focus:ring-2 focus:ring-[#8CAB91]/50 focus:border-[#8CAB91] outline-none transition-all w-full placeholder-stone-400 shadow-sm";
 
-  // Lógica: Mostra o Preview (Novo) OU a Foto Atual (Banco)
   const imageToShow = preview || currentPhotoUrl;
 
   if (type === "file") {

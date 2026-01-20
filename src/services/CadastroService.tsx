@@ -23,11 +23,9 @@ export const CadastroService = {
     });
   },
 
-  // --- NOVA FUNÇÃO DE UPDATE ---
   update: async (data: Cadastro) => {
     let fotoPath = data.fotoUrl;
 
-    // Se o usuário selecionou uma NOVA foto
     if (data.fotoFile) {
       const buffer = await data.fotoFile.arrayBuffer();
       // @ts-ignore
@@ -41,7 +39,7 @@ export const CadastroService = {
     return await window.api.updateCadastro({
       ...data,
       fotoUrl: fotoPath,
-      fotoFile: undefined, // Não mandamos o arquivo cru pro banco
+      fotoFile: undefined,
     });
   },
   delete: async (id: number) => {

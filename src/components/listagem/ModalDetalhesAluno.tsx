@@ -4,7 +4,7 @@ interface Props {
   student: Cadastro;
   onClose: () => void;
   onEdit: () => void;
-  onGenerateDoc: () => void; // Ação para quando clicar em "Editar"
+  onGenerateDoc: () => void;
 }
 
 export default function ModalDetalhesAluno({
@@ -13,7 +13,6 @@ export default function ModalDetalhesAluno({
   onEdit,
   onGenerateDoc,
 }: Props) {
-  // Helpers visuais (formatadores)
   const formatMoney = (val?: number) => `R$ ${(Number(val) || 0).toFixed(2)}`;
   const getPhoto = () =>
     student.fotoUrl ? `media://${student.fotoUrl.replace(/\\/g, "/")}` : null;
@@ -21,7 +20,6 @@ export default function ModalDetalhesAluno({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        {/* CABEÇALHO COM FOTO E NOME */}
         <div className="relative bg-stone-100 p-6 flex flex-col items-center border-b border-stone-200">
           <button
             onClick={onClose}
@@ -61,9 +59,7 @@ export default function ModalDetalhesAluno({
           </span>
         </div>
 
-        {/* CORPO COM INFORMAÇÕES (READ-ONLY) */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Seção 1: Dados Pessoais */}
           <div>
             <h3 className="text-xs font-bold text-[#8CAB91] uppercase tracking-widest mb-3 border-b border-stone-100 pb-1">
               Dados Pessoais

@@ -6,7 +6,7 @@ import Popup from "../components/layout/popup";
 import Stepper from "../components/common/Stepper";
 import StepPersonalData from "../components/cadastro/StepPersonalData";
 import StepFinancialData from "../components/cadastro/StepFinancialData";
-import StepPresenceData from "../components/cadastro/StepPresenceData"; // Importe o novo step
+import StepPresenceData from "../components/cadastro/StepPresenceData";
 import FormActions from "../components/cadastro/FormActions";
 
 interface Props {
@@ -53,9 +53,7 @@ export default function TelaCadastro({ onSuccess }: Props) {
     }));
   }
 
-  // Controle de validação e avanço de etapas
   const proximaEtapa = () => {
-    // Validação Passo 1
     if (etapa === 1) {
       if (!cadastroDados.nome || !cadastroDados.cpf) {
         setShowPopup({ open: true, key: 1 });
@@ -66,11 +64,8 @@ export default function TelaCadastro({ onSuccess }: Props) {
       return;
     }
 
-    // Validação Passo 2 (Opcional: Exigir Turma?)
     if (etapa === 2) {
       if (!cadastroDados.turma) {
-        // Se quiser obrigar a ter turma, descomente abaixo ou crie um popup novo
-        // alert("Preencha a turma!");
         // return;
       }
       setEtapa(3);
@@ -90,7 +85,7 @@ export default function TelaCadastro({ onSuccess }: Props) {
 
       setTimeout(() => {
         setShowPopup({ open: true, key: 2 });
-        // Reset total
+
         setCadastroDados({
           nome: "",
           rg: "",
@@ -120,7 +115,6 @@ export default function TelaCadastro({ onSuccess }: Props) {
     }
   }
 
-  // Renderização condicional dos Steps
   const renderStep = () => {
     switch (etapa) {
       case 1:
@@ -146,7 +140,6 @@ export default function TelaCadastro({ onSuccess }: Props) {
 
       <div className="p-8 bg-white min-h-100">{renderStep()}</div>
 
-      {/* Popups (Mantidos iguais) */}
       <div>
         {showPopup.open && showPopup.key === 1 && (
           <Popup onClose={() => setShowPopup({ open: false, key: 0 })}>

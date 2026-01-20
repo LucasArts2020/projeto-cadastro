@@ -1,4 +1,3 @@
-// src/pages/TelaListagem.tsx
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { CadastroService } from "../services/CadastroService";
@@ -9,7 +8,7 @@ import ActionBar from "../components/listagem/ActionBar";
 import StudentTable from "../components/listagem/StudentTable";
 import ModalEditarAluno from "../components/listagem/ModalEditorAluno";
 import ModalDetalhesAluno from "../components/listagem/ModalDetalhesAluno";
-// Importe o novo modal de documento
+
 import ModalGerarDocumento from "../components/listagem/ModalGerarDocumento";
 import ModalFiltros, {
   FilterOptions,
@@ -28,7 +27,6 @@ export default function TelaListagem() {
   });
   const [studentToDelete, setStudentToDelete] = useState<Cadastro | null>(null);
 
-  // ESTADOS DE FILTRO
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterOptions>({
     horario: "",
@@ -37,7 +35,6 @@ export default function TelaListagem() {
     planoMensal: "",
   });
 
-  // Estados dos Modais
   const [viewStudent, setViewStudent] = useState<Cadastro | null>(null);
   const [editStudent, setEditStudent] = useState<Cadastro | null>(null);
   const [docStudent, setDocStudent] = useState<Cadastro | null>(null); // <--- Novo estado
@@ -83,27 +80,22 @@ export default function TelaListagem() {
     }
   };
 
-  // --- LÓGICA DE FILTRAGEM ---
   const filteredStudents = useMemo(() => {
     return students.filter((s) => {
-      // 1. Busca por Texto
       const matchesSearch =
         searchTerm === "" ||
         s.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
         s.cpf.includes(searchTerm) ||
         (s.turma && s.turma.toLowerCase().includes(searchTerm.toLowerCase()));
 
-      // 2. Filtro de Horário
       const matchesHorario =
         filters.horario === "" || s.horarioAula === filters.horario;
 
-      // 3. Filtro de Dias da Semana
       const matchesDias =
         filters.dias.length === 0 ||
         (s.diasSemana &&
           s.diasSemana.some((diaAluno) => filters.dias.includes(diaAluno)));
 
-      // 4. Filtros Financeiros
       const matchesDiaVenc =
         filters.diaVencimento === "" ||
         String(s.diaVencimento) === filters.diaVencimento;
@@ -121,7 +113,6 @@ export default function TelaListagem() {
     });
   }, [students, searchTerm, filters]);
 
-  // Conta filtros ativos
   const activeFiltersCount =
     [filters.horario, filters.diaVencimento, filters.planoMensal].filter(
       Boolean,
@@ -144,8 +135,6 @@ export default function TelaListagem() {
         onDelete={handleDelete}
       />
 
-      {/* --- MODAIS --- */}
-
       <ModalFiltros
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
@@ -153,7 +142,6 @@ export default function TelaListagem() {
         onApply={setFilters}
       />
 
-      {/* MODAL DE DETALHES (Com ação de gerar documento) */}
       {viewStudent && (
         <ModalDetalhesAluno
           student={viewStudent}
@@ -163,13 +151,12 @@ export default function TelaListagem() {
             setViewStudent(null);
           }}
           onGenerateDoc={() => {
-            setDocStudent(viewStudent); // Define o aluno para o doc
-            setViewStudent(null); // Fecha o modal de detalhes
+            setDocStudent(viewStudent);
+            setViewStudent(null);
           }}
         />
       )}
 
-      {/* NOVO MODAL DE GERAR DOCUMENTO */}
       {docStudent && (
         <ModalGerarDocumento
           student={docStudent}
@@ -177,7 +164,6 @@ export default function TelaListagem() {
         />
       )}
 
-      {/* MODAL DE EDIÇÃO */}
       {editStudent && (
         <ModalEditarAluno
           student={editStudent}

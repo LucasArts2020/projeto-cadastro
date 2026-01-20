@@ -1,4 +1,3 @@
-// src/components/Icons.tsx
 export const Icons = {
   Search: () => (
     <svg

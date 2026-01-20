@@ -5,13 +5,11 @@ export default function Sidebar() {
   const linkClass =
     "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium text-sm group";
 
-  // Nova cor ativa: Verde Sálvia
   const activeClass = "bg-[#8CAB91] text-white shadow-lg shadow-[#8CAB91]/40";
   const inactiveClass = "text-stone-400 hover:bg-white/5 hover:text-white";
 
   return (
     <aside className="w-64 bg-[#2C2C2C] text-white flex flex-col fixed h-full z-20 shadow-xl border-r border-white/5">
-      {/* Logo Roncon Studio */}
       <div className="h-24 flex flex-col items-center justify-center border-b border-white/5 py-4">
         <div className="w-12 h-12 rounded-full border-2 border-white flex items-center justify-center mb-2">
           <span className="text-2xl font-serif">R</span>
@@ -26,13 +24,11 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Navegação */}
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto mt-4">
         <p className="px-4 text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-2">
           Menu
         </p>
 
-        {/* MUDANÇA 1: Alunos agora é a Home (/) e vem primeiro */}
         <NavLink
           to="/"
           className={({ isActive }) =>
@@ -43,7 +39,6 @@ export default function Sidebar() {
           <span>Alunos</span>
         </NavLink>
 
-        {/* MUDANÇA 2: Matrícula aponta para /cadastro */}
         <NavLink
           to="/cadastro"
           className={({ isActive }) =>

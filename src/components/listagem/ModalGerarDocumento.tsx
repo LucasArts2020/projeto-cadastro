@@ -15,7 +15,6 @@ export default function ModalGerarDocumento({ student, onClose }: Props) {
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
-      // Passa a taxa escolhida para o gerador
       await gerarContratoMatricula(student, infoAdicional, taxaMulta);
       onClose();
     } catch (error) {
@@ -28,7 +27,6 @@ export default function ModalGerarDocumento({ student, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col relative">
-        {/* CABEÇALHO */}
         <div className="bg-stone-50 p-6 border-b border-stone-100 text-center">
           <h3 className="font-serif text-xl text-stone-800 font-bold">
             Gerar Documento
@@ -36,7 +34,6 @@ export default function ModalGerarDocumento({ student, onClose }: Props) {
           <p className="text-sm text-stone-500 mt-1">{student.nome}</p>
         </div>
 
-        {/* CONTEÚDO */}
         <div className="p-6">
           {isDownloading ? (
             <div className="flex flex-col items-center justify-center py-8 space-y-4">
@@ -66,7 +63,6 @@ export default function ModalGerarDocumento({ student, onClose }: Props) {
             </div>
           ) : (
             <div className="space-y-4">
-              {/* CAMPO DA TAXA DE MULTA */}
               <div>
                 <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-2">
                   Taxa de Multa (%)
@@ -80,7 +76,6 @@ export default function ModalGerarDocumento({ student, onClose }: Props) {
                 />
               </div>
 
-              {/* CAMPO DE INFO ADICIONAL */}
               <div>
                 <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-2">
                   Informações Adicionais (Opcional)
@@ -96,7 +91,6 @@ export default function ModalGerarDocumento({ student, onClose }: Props) {
           )}
         </div>
 
-        {/* RODAPÉ */}
         {!isDownloading && (
           <div className="p-4 bg-stone-50 border-t border-stone-100 flex justify-end gap-3">
             <button

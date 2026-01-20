@@ -22,26 +22,22 @@ export interface ClassDetailItem {
   status: "presente" | "falta" | "justificado";
 }
 
-// Interface para os filtros
 export interface HistoryFilters {
   startDate?: string;
   endDate?: string;
 }
 
 export const AttendanceService = {
-  // Salvar chamada
   save: async (data: AttendancePayload) => {
     // @ts-ignore
     return await window.api.saveAttendance(data);
   },
 
-  // Buscar histórico (Unificado: Aceita filtros ou undefined)
   getHistory: async (filters?: HistoryFilters): Promise<HistoricoItem[]> => {
     // @ts-ignore
     return await window.api.getAttendanceHistory(filters);
   },
 
-  // Buscar detalhes de uma aula específica
   getDetails: async (classId: number): Promise<ClassDetailItem[]> => {
     // @ts-ignore
     return await window.api.getClassDetails(classId);

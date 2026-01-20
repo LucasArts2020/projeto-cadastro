@@ -5,7 +5,6 @@ import { Cadastro } from "../types/typeCadastro";
 import { Icons } from "../components/common/Icons";
 import Popup from "../components/layout/popup";
 
-// --- Tipos Auxiliares ---
 type ViewState = "SELECAO" | "CHAMADA";
 
 interface ClassGroup {
@@ -16,22 +15,18 @@ interface ClassGroup {
 }
 
 export default function TelaTurmas() {
-  // --- Estados Globais ---
   const [students, setStudents] = useState<Cadastro[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState<ViewState>("SELECAO");
 
-  // INICIALIZAÇÃO INTELIGENTE: Pega o dia da semana atual do sistema
   const [diaFiltro, setDiaFiltro] = useState<string>(getDiaAtualSigla());
 
-  // --- Estados da Chamada ---
   const [selectedGroup, setSelectedGroup] = useState<ClassGroup | null>(null);
   const [presencas, setPresencas] = useState<
     Record<number, "presente" | "falta" | "justificado">
   >({});
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // --- Carregamento Inicial ---
   useEffect(() => {
     loadStudents();
   }, []);
@@ -45,17 +40,13 @@ export default function TelaTurmas() {
     }
   };
 
-  // --- HELPERS DE DATA ---
-
-  // 1. Pega a sigla para o filtro (Ex: "Seg", "Ter")
   function getDiaAtualSigla() {
     const dias = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
     const hoje = new Date().getDay();
-    // Se for domingo, joga para segunda (ou mantenha Dom se tiver aula domingo)
+
     return dias[hoje] === "Dom" ? "Seg" : dias[hoje];
   }
 
-  // 2. Pega a data formatada para exibição (Ex: "19 de Janeiro de 2026")
   function getDataExibicao() {
     return new Date().toLocaleDateString("pt-BR", {
       day: "numeric",
@@ -64,12 +55,10 @@ export default function TelaTurmas() {
     });
   }
 
-  // --- LÓGICA DE AGRUPAMENTO ---
   const turmasDoDia = useMemo(() => {
     const groups: Record<string, ClassGroup> = {};
 
     students.forEach((aluno) => {
-      // Verifica se o aluno frequenta esse dia
       const frequentaHoje =
         aluno.diasSemana && aluno.diasSemana.includes(diaFiltro);
 
@@ -95,8 +84,6 @@ export default function TelaTurmas() {
     );
   }, [students, diaFiltro]);
 
-  // --- AÇÕES ---
-
   const handleSelectClass = (group: ClassGroup) => {
     setSelectedGroup(group);
     setPresencas({});
@@ -120,13 +107,11 @@ export default function TelaTurmas() {
       status: presencas[student.id!] || "falta",
     }));
 
-    // CORREÇÃO DE DATA PARA O BRASIL (Evita erro de fuso horário UTC)
     const dataLocal = new Date()
       .toLocaleDateString("pt-BR")
       .split("/")
       .reverse()
       .join("-");
-    // Isso gera YYYY-MM-DD com base na hora local do computador
 
     const payload = {
       turma: selectedGroup.turma,
@@ -147,11 +132,8 @@ export default function TelaTurmas() {
     }
   };
 
-  // --- RENDERIZAÇÃO ---
-
   return (
     <div className="flex flex-col h-full relative bg-gray-50/30">
-      {/* --- HEADER COM DATA DE HOJE --- */}
       <div className="p-6 border-b border-gray-100 bg-white flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-10 shadow-sm">
         <div className="flex items-center gap-3">
           {currentView === "CHAMADA" && (
@@ -168,7 +150,6 @@ export default function TelaTurmas() {
                 ? "Turmas do Dia"
                 : `Chamada: ${selectedGroup?.turma}`}
 
-              {/* Tag com a data de hoje para confirmar sincronização */}
               {currentView === "SELECAO" && (
                 <span className="text-xs font-sans font-normal bg-[#8CAB91]/10 text-[#5A7A60] px-2 py-1 rounded-md border border-[#8CAB91]/20">
                   {getDataExibicao()}
@@ -184,7 +165,6 @@ export default function TelaTurmas() {
           </div>
         </div>
 
-        {/* Filtro de Dia */}
         <div className="flex bg-gray-100 p-1 rounded-lg overflow-x-auto max-w-full">
           {["Seg", "Ter", "Qua", "Qui", "Sex", "Sab"].map((dia) => (
             <button
@@ -205,7 +185,6 @@ export default function TelaTurmas() {
         </div>
       </div>
 
-      {/* --- CONTEÚDO PRINCIPAL --- */}
       <div className="flex-1 p-6 overflow-y-auto pb-24">
         {loading && (
           <div className="text-center py-10 text-gray-400 animate-pulse">
@@ -213,7 +192,6 @@ export default function TelaTurmas() {
           </div>
         )}
 
-        {/* VISTA 1: SELEÇÃO DE TURMAS */}
         {!loading && currentView === "SELECAO" && (
           <>
             {turmasDoDia.length === 0 ? (
@@ -257,7 +235,6 @@ export default function TelaTurmas() {
           </>
         )}
 
-        {/* VISTA 2: LISTA DE CHAMADA */}
         {!loading && currentView === "CHAMADA" && selectedGroup && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in-up">
             {selectedGroup.alunos.map((student) => (
@@ -272,7 +249,6 @@ export default function TelaTurmas() {
         )}
       </div>
 
-      {/* --- BOTÃO FLUTUANTE --- */}
       {currentView === "CHAMADA" && (
         <div className="absolute bottom-6 left-0 right-0 flex justify-center z-20 pointer-events-none">
           <button
@@ -285,7 +261,6 @@ export default function TelaTurmas() {
         </div>
       )}
 
-      {/* --- POPUP DE SUCESSO --- */}
       {showSuccess && (
         <Popup
           onClose={() => {
@@ -322,7 +297,6 @@ export default function TelaTurmas() {
   );
 }
 
-// --- COMPONENTE AUXILIAR (MANTIDO) ---
 function CardChamada({
   student,
   status,

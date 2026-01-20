@@ -4,7 +4,7 @@ interface Props {
   students: Cadastro[];
   loading: boolean;
   onSelect: (student: Cadastro) => void;
-  onDelete: (student: Cadastro) => void; // <--- Já estava na interface, agora vamos usar
+  onDelete: (student: Cadastro) => void;
 }
 
 export default function StudentTable({
@@ -75,7 +75,6 @@ export default function StudentTable({
                   onClick={() => onSelect(student)}
                   className="group hover:bg-[#8CAB91]/5 transition-colors border-b border-stone-50 last:border-0 cursor-pointer relative"
                 >
-                  {/* Coluna Aluno */}
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-full bg-[#8CAB91] text-white flex items-center justify-center font-serif font-bold text-sm shadow-sm overflow-hidden shrink-0 border border-[#8CAB91]/20">
@@ -103,7 +102,6 @@ export default function StudentTable({
                     </div>
                   </td>
 
-                  {/* Coluna Horário */}
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <span className="text-sm font-medium text-stone-700">
@@ -117,7 +115,6 @@ export default function StudentTable({
                     </div>
                   </td>
 
-                  {/* Coluna Status */}
                   <td className="px-6 py-4">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(student.diaVencimento)}`}
@@ -126,19 +123,17 @@ export default function StudentTable({
                     </span>
                   </td>
 
-                  {/* Coluna Valor */}
                   <td className="px-6 py-4 text-right">
                     <span className="font-serif font-medium text-stone-800">
                       R$ {Number(student.valorMensalidade || 0).toFixed(2)}
                     </span>
                   </td>
 
-                  {/* Ações (LIXEIRA ADICIONADA) */}
                   <td className="px-6 py-4 text-center">
                     <button
                       onClick={(e) => {
-                        e.stopPropagation(); // Impede de abrir o modal de detalhes
-                        onDelete(student); // Chama a função de deletar
+                        e.stopPropagation();
+                        onDelete(student);
                       }}
                       title="Excluir Aluno"
                       className="p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all opacity-0 group-hover:opacity-100"

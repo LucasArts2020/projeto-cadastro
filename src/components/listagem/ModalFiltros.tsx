@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Icons } from "../common/Icons";
-// Importamos os horários padrão para não ter que digitar
+
 import { OPCOES_HORARIOS } from "../../utils/options";
 
 export interface FilterOptions {
   horario: string;
-  dias: string[]; // Array de dias (ex: ["Seg", "Qua"])
+  dias: string[];
   diaVencimento: string;
   planoMensal: string;
 }
@@ -34,7 +34,6 @@ export default function ModalFiltros({
     setLocalFilters((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Lógica para alternar (marcar/desmarcar) dias da semana
   const toggleDia = (dia: string) => {
     setLocalFilters((prev) => {
       const diasAtuais = prev.dias || [];
@@ -66,7 +65,6 @@ export default function ModalFiltros({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Cabeçalho */}
         <div className="px-6 py-4 border-b border-stone-100 bg-stone-50 flex justify-between items-center">
           <h2 className="text-lg font-bold text-stone-700 flex items-center gap-2">
             <Icons.Filter /> Filtros Avançados
@@ -79,15 +77,12 @@ export default function ModalFiltros({
           </button>
         </div>
 
-        {/* Corpo Scrollável */}
         <div className="p-6 space-y-6 overflow-y-auto">
-          {/* SEÇÃO 1: HORÁRIO & FREQUÊNCIA */}
           <div>
             <h3 className="text-xs font-bold text-[#8CAB91] uppercase tracking-widest mb-3 border-b border-stone-100 pb-1">
               Turma e Frequência
             </h3>
             <div className="space-y-4">
-              {/* Filtro: Horário */}
               <div>
                 <label className="block text-xs font-bold text-stone-500 uppercase mb-1">
                   Horário da Aula
@@ -106,7 +101,6 @@ export default function ModalFiltros({
                 </select>
               </div>
 
-              {/* Filtro: Dias da Semana */}
               <div>
                 <label className="block text-xs font-bold text-stone-500 uppercase mb-2">
                   Dias da Semana
@@ -136,13 +130,11 @@ export default function ModalFiltros({
             </div>
           </div>
 
-          {/* SEÇÃO 2: FINANCEIRO */}
           <div>
             <h3 className="text-xs font-bold text-[#8CAB91] uppercase tracking-widest mb-3 border-b border-stone-100 pb-1">
               Financeiro
             </h3>
             <div className="grid grid-cols-2 gap-4">
-              {/* Filtro: Dia Vencimento */}
               <div>
                 <label className="block text-xs font-bold text-stone-500 uppercase mb-1">
                   Vencimento
@@ -163,7 +155,6 @@ export default function ModalFiltros({
                 </select>
               </div>
 
-              {/* Filtro: Plano */}
               <div>
                 <label className="block text-xs font-bold text-stone-500 uppercase mb-1">
                   Plano

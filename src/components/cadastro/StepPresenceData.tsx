@@ -20,9 +20,6 @@ const DIAS_OPCOES = [
 export default function StepPresenceData({ data, onChange }: Props) {
   const opcoesHorarios = OPCOES_HORARIOS.map((h) => ({ label: h, value: h }));
 
-  // --- AUTOMATIZAÇÃO ---
-  // Define a turma automaticamente como "Treino" (ou o nome padrão)
-  // assim que entra nessa tela, para o banco não dar erro.
   useEffect(() => {
     if (data.turma !== NOME_PADRAO) {
       onChange("turma", NOME_PADRAO);
@@ -48,9 +45,6 @@ export default function StepPresenceData({ data, onChange }: Props) {
         </p>
       </div>
 
-      {/* REMOVEMOS O INPUT DE TURMA DAQUI */}
-
-      {/* Ficou apenas o Horário */}
       <FormInput<Cadastro>
         label="Horário Fixo"
         name="horarioAula"
@@ -61,7 +55,6 @@ export default function StepPresenceData({ data, onChange }: Props) {
         autoFocus
       />
 
-      {/* Seleção de Dias */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Dias de Frequência

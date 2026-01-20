@@ -10,7 +10,6 @@ import {
 import { saveAs } from "file-saver";
 import { Cadastro } from "../types/typeCadastro";
 
-// Função auxiliar para calcular idade
 const calcularIdade = (dataNasc: string) => {
   if (!dataNasc) return "";
   const hoje = new Date();
@@ -26,9 +25,8 @@ const calcularIdade = (dataNasc: string) => {
 export const gerarContratoMatricula = async (
   aluno: Cadastro,
   infoAdicional: string = "",
-  taxaMulta: string = "10", // <--- NOVO PARÂMETRO (Padrão 10)
+  taxaMulta: string = "10",
 ) => {
-  // Simula delay para animação
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
   const dataHoje = new Date().toLocaleDateString("pt-BR", {
@@ -55,14 +53,14 @@ export const gerarContratoMatricula = async (
         document: {
           run: {
             font: "Arial",
-            size: 24, // 12pt
+            size: 24,
             color: "000000",
           },
         },
         heading1: {
           run: {
             font: "Arial",
-            size: 32, // 16pt
+            size: 32,
             bold: true,
             color: "000000",
           },
@@ -73,7 +71,6 @@ export const gerarContratoMatricula = async (
       {
         properties: {},
         children: [
-          // TÍTULO
           new Paragraph({
             text: "Ficha de inscrição",
             heading: HeadingLevel.TITLE,
@@ -81,7 +78,6 @@ export const gerarContratoMatricula = async (
             spacing: { after: 800 },
           }),
 
-          // LINHA 1
           new Paragraph({
             children: [
               new TextRun({ text: "Nome: " }),
@@ -103,7 +99,6 @@ export const gerarContratoMatricula = async (
             spacing: { after: 200 },
           }),
 
-          // LINHA 2
           new Paragraph({
             children: [
               new TextRun({ text: "Data nasc.: " }),
@@ -125,7 +120,6 @@ export const gerarContratoMatricula = async (
             spacing: { after: 200 },
           }),
 
-          // LINHA 3
           new Paragraph({
             children: [
               new TextRun({ text: "Endereço: " }),
@@ -140,7 +134,6 @@ export const gerarContratoMatricula = async (
             spacing: { after: 400 },
           }),
 
-          // LINHA 4
           new Paragraph({
             children: [
               new TextRun({ text: "Realiza atividade física:  " }),
@@ -151,7 +144,6 @@ export const gerarContratoMatricula = async (
             spacing: { after: 200 },
           }),
 
-          // LINHA 5
           new Paragraph({
             children: [
               new TextRun({ text: "possui problema de saúde, tais como:" }),
@@ -166,7 +158,6 @@ export const gerarContratoMatricula = async (
             spacing: { after: 200 },
           }),
 
-          // LINHA 6
           new Paragraph({
             children: [
               new TextRun({ text: "problema motor: " }),
@@ -177,7 +168,6 @@ export const gerarContratoMatricula = async (
             spacing: { after: 400 },
           }),
 
-          // OBS ADICIONAIS
           ...(infoAdicional
             ? [
                 new Paragraph({
@@ -190,7 +180,6 @@ export const gerarContratoMatricula = async (
               ]
             : []),
 
-          // LINHA 7
           new Paragraph({
             children: [
               new TextRun({ text: "Plano: " }),
@@ -219,7 +208,6 @@ export const gerarContratoMatricula = async (
             spacing: { after: 400 },
           }),
 
-          // LINHA 8
           new Paragraph({
             children: [
               new TextRun({
@@ -230,7 +218,6 @@ export const gerarContratoMatricula = async (
             spacing: { after: 400 },
           }),
 
-          // ATENÇÃO (COM A TAXA DINÂMICA)
           new Paragraph({
             children: [
               new TextRun({
@@ -246,7 +233,7 @@ export const gerarContratoMatricula = async (
             alignment: AlignmentType.JUSTIFIED,
             bullet: { level: 0 },
           }),
-          // 👇 AQUI ESTÁ A MUDANÇA DA TAXA
+
           new Paragraph({
             text: `Em caso de atraso da mensalidade o aluno estará sujeito a pagar multa de ${taxaMulta}% do valor total.`,
             alignment: AlignmentType.JUSTIFIED,
@@ -264,7 +251,6 @@ export const gerarContratoMatricula = async (
             spacing: { after: 600 },
           }),
 
-          // DATA E ASSINATURA
           new Paragraph({
             children: [
               new TextRun({ text: "Data: " }),

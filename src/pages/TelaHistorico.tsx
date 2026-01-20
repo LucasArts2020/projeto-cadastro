@@ -16,7 +16,6 @@ export default function TelaHistorico() {
     null,
   );
 
-  // Filtros
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [filterTime, setFilterTime] = useState("");
@@ -40,7 +39,6 @@ export default function TelaHistorico() {
     }
   };
 
-  // --- NOVA FUNÇÃO DE DELETAR ---
   const handleDelete = async (item: HistoricoItem) => {
     const confirmou = window.confirm(
       `Deseja excluir o registro da aula "${item.turma}" do dia ${formatDate(item.data_aula)}?\n\nIsso apagará as presenças lançadas para esta aula.`,
@@ -51,7 +49,7 @@ export default function TelaHistorico() {
       try {
         const response = await AttendanceService.delete(item.id);
         if (response.success) {
-          loadHistory(); // Recarrega a lista
+          loadHistory();
         } else {
           alert("Erro ao excluir: " + response.error);
         }
@@ -105,7 +103,6 @@ export default function TelaHistorico() {
 
   return (
     <div className="flex flex-col h-full bg-gray-50/30 relative">
-      {/* HEADER */}
       <div className="p-6 border-b border-gray-100 bg-white shadow-sm flex flex-col gap-4 sticky top-0 z-10">
         <div className="flex items-center gap-4">
           {viewState === "DETALHES" && (
@@ -131,7 +128,6 @@ export default function TelaHistorico() {
           </div>
         </div>
 
-        {/* FILTROS (Apenas na Lista) */}
         {viewState === "LISTA" && (
           <div className="flex flex-wrap items-end gap-3 mt-2 animate-fade-in">
             <div>
@@ -175,14 +171,14 @@ export default function TelaHistorico() {
             </div>
             <button
               onClick={loadHistory}
-              className="px-6 py-2 bg-[#2C2C2C] text-white rounded-xl text-sm font-medium hover:bg-black transition-colors shadow-lg shadow-black/10 flex items-center gap-2 h-[38px]"
+              className="px-6 py-2 bg-[#2C2C2C] text-white rounded-xl text-sm font-medium hover:bg-black transition-colors shadow-lg shadow-black/10 flex items-center gap-2 h-9.5"
             >
               <Icons.Filter /> Filtrar
             </button>
             {(startDate || endDate || filterTime) && (
               <button
                 onClick={clearFilters}
-                className="px-4 py-2 text-red-400 hover:text-red-600 text-sm font-medium transition-colors h-[38px]"
+                className="px-4 py-2 text-red-400 hover:text-red-600 text-sm font-medium transition-colors h-9.5"
               >
                 Limpar
               </button>
@@ -191,13 +187,11 @@ export default function TelaHistorico() {
         )}
       </div>
 
-      {/* CONTEÚDO */}
       <div className="flex-1 p-6 overflow-y-auto pb-20">
         {loading && (
           <div className="text-center py-10 text-gray-400">Carregando...</div>
         )}
 
-        {/* LISTA DE HISTÓRICO */}
         {!loading && viewState === "LISTA" && (
           <div className="space-y-4 max-w-4xl mx-auto">
             {filteredHistory.length === 0 ? (
@@ -239,10 +233,9 @@ export default function TelaHistorico() {
                     </p>
                   </div>
 
-                  {/* BOTÃO DE DELETAR NOVO */}
                   <button
                     onClick={(e) => {
-                      e.stopPropagation(); // Impede abrir detalhes
+                      e.stopPropagation();
                       handleDelete(item);
                     }}
                     className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
@@ -269,7 +262,6 @@ export default function TelaHistorico() {
           </div>
         )}
 
-        {/* DETALHES (Mantido igual) */}
         {!loading && viewState === "DETALHES" && selectedClass && (
           <div className="max-w-5xl mx-auto animate-fade-in-up">
             <div className="grid grid-cols-3 gap-4 mb-8">

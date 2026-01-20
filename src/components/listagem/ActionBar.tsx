@@ -4,8 +4,8 @@ interface Props {
   searchTerm: string;
   onSearchChange: (val: string) => void;
   onNewStudent: () => void;
-  onFilterClick: () => void; // <--- NOVA PROP
-  activeFiltersCount?: number; // Para mostrar uma bolinha se tiver filtro ativo
+  onFilterClick: () => void;
+  activeFiltersCount?: number;
 }
 
 export default function ActionBar({
@@ -17,7 +17,6 @@ export default function ActionBar({
 }: Props) {
   return (
     <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-stone-100">
-      {/* Barra de Pesquisa */}
       <div className="relative w-full md:w-96 group">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400 group-focus-within:text-[#8CAB91] transition-colors">
           <Icons.Search />
@@ -31,9 +30,7 @@ export default function ActionBar({
         />
       </div>
 
-      {/* Botões de Ação */}
       <div className="flex gap-3 w-full md:w-auto">
-        {/* BOTÃO DE FILTRO (NOVO) */}
         <button
           onClick={onFilterClick}
           className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-all relative ${
@@ -45,7 +42,6 @@ export default function ActionBar({
           <Icons.Filter />
           <span className="font-medium text-sm">Filtros</span>
 
-          {/* Bolinha de contador se tiver filtros ativos */}
           {activeFiltersCount > 0 && (
             <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm">
               {activeFiltersCount}
@@ -53,7 +49,6 @@ export default function ActionBar({
           )}
         </button>
 
-        {/* Botão Novo Aluno */}
         <button
           onClick={onNewStudent}
           className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#2C2C2C] text-white px-6 py-3 rounded-xl hover:bg-black transition-all shadow-lg shadow-black/20 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"

@@ -7,7 +7,7 @@ interface Props {
 export default function Stepper({ currentStep }: Props) {
   const steps = [
     { id: 1, label: "Pessoal" },
-    { id: 2, label: "Frequência" }, // Nova etapa funcionando!
+    { id: 2, label: "Frequência" },
     { id: 3, label: "Financeiro" },
   ];
 
@@ -22,12 +22,8 @@ export default function Stepper({ currentStep }: Props) {
           return (
             <div
               key={step.id}
-              // CORREÇÃO DE LAYOUT:
-              // O último item NÃO deve ter flex-1, senão ele empurra tudo para a esquerda.
-              // Os outros devem ter flex-1 para esticar a linha conectora.
               className={`flex items-center ${isLast ? "" : "flex-1"}`}
             >
-              {/* Bolinha do Passo */}
               <div className="relative flex flex-col items-center group">
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 z-10 
@@ -46,7 +42,6 @@ export default function Stepper({ currentStep }: Props) {
                   )}
                 </div>
 
-                {/* Label */}
                 <span
                   className={`absolute -bottom-6 text-xs font-medium tracking-wide whitespace-nowrap transition-colors duration-300 ${
                     isActive ? "text-[#8CAB91]" : "text-gray-400"
@@ -56,7 +51,6 @@ export default function Stepper({ currentStep }: Props) {
                 </span>
               </div>
 
-              {/* Linha Conectora (não mostra no último item) */}
               {!isLast && (
                 <div className="flex-1 h-0.5 mx-4 bg-gray-100 relative overflow-hidden rounded-full">
                   <div

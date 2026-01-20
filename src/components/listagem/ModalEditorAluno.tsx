@@ -22,14 +22,13 @@ export default function ModalEditarAluno({
   const [etapa, setEtapa] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Inicializa o estado com os dados do aluno recebido
   const [dados, setDados] = useState<Cadastro>({ ...student });
 
   function handleChange(name: keyof Cadastro, value: any) {
     setDados((prev) => ({
       ...prev,
       [name]: value,
-      ...(value instanceof File && { fotoFile: value }), // Atualiza arquivo se houver
+      ...(value instanceof File && { fotoFile: value }),
     }));
   }
 
@@ -65,11 +64,8 @@ export default function ModalEditarAluno({
   };
 
   return (
-    // Overlay Escuro
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-      {/* Container do Modal */}
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-        {/* Header do Modal */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-stone-50">
           <div>
             <h2 className="text-lg font-bold text-stone-700">Editar Aluno</h2>
