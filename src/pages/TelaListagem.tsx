@@ -1,3 +1,4 @@
+// src/pages/TelaListagem.tsx
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { CadastroService } from "../services/CadastroService";
@@ -7,6 +8,8 @@ import ActionBar from "../components/listagem/ActionBar";
 import StudentTable from "../components/listagem/StudentTable";
 import ModalEditarAluno from "../components/listagem/ModalEditorAluno";
 import ModalDetalhesAluno from "../components/listagem/ModalDetalhesAluno";
+// Importe o novo modal de documento
+import ModalGerarDocumento from "../components/listagem/ModalGerarDocumento";
 import ModalFiltros, {
   FilterOptions,
 } from "../components/listagem/ModalFiltros";
@@ -17,7 +20,7 @@ export default function TelaListagem() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // ESTADOS DE FILTRO (Agora inclui array de dias)
+  // ESTADOS DE FILTRO
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterOptions>({
     horario: "",
@@ -26,8 +29,10 @@ export default function TelaListagem() {
     planoMensal: "",
   });
 
+  // Estados dos Modais
   const [viewStudent, setViewStudent] = useState<Cadastro | null>(null);
   const [editStudent, setEditStudent] = useState<Cadastro | null>(null);
+  const [docStudent, setDocStudent] = useState<Cadastro | null>(null); // <--- Novo estado
 
   useEffect(() => {
     loadStudents();
@@ -64,10 +69,10 @@ export default function TelaListagem() {
     }
   };
 
-  // --- LÓGICA DE FILTRAGEM ATUALIZADA ---
+  // --- LÓGICA DE FILTRAGEM ---
   const filteredStudents = useMemo(() => {
     return students.filter((s) => {
-      // 1. Busca por Texto (Nome, CPF ou Turma)
+      // 1. Busca por Texto
       const matchesSearch =
         searchTerm === "" ||
         s.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -78,9 +83,7 @@ export default function TelaListagem() {
       const matchesHorario =
         filters.horario === "" || s.horarioAula === filters.horario;
 
-      // 3. Filtro de Dias da Semana (Interseção)
-      // Se nenhum dia foi selecionado no filtro, passa todos.
-      // Se selecionou dias, o aluno precisa ter pelo menos UM desses dias na lista dele.
+      // 3. Filtro de Dias da Semana
       const matchesDias =
         filters.dias.length === 0 ||
         (s.diasSemana &&
@@ -104,7 +107,7 @@ export default function TelaListagem() {
     });
   }, [students, searchTerm, filters]);
 
-  // Conta filtros ativos (se array dias > 0 conta como +1)
+  // Conta filtros ativos
   const activeFiltersCount =
     [filters.horario, filters.diaVencimento, filters.planoMensal].filter(
       Boolean,
@@ -136,6 +139,7 @@ export default function TelaListagem() {
         onApply={setFilters}
       />
 
+      {/* MODAL DE DETALHES (Com ação de gerar documento) */}
       {viewStudent && (
         <ModalDetalhesAluno
           student={viewStudent}
@@ -144,9 +148,22 @@ export default function TelaListagem() {
             setEditStudent(viewStudent);
             setViewStudent(null);
           }}
+          onGenerateDoc={() => {
+            setDocStudent(viewStudent); // Define o aluno para o doc
+            setViewStudent(null); // Fecha o modal de detalhes
+          }}
         />
       )}
 
+      {/* NOVO MODAL DE GERAR DOCUMENTO */}
+      {docStudent && (
+        <ModalGerarDocumento
+          student={docStudent}
+          onClose={() => setDocStudent(null)}
+        />
+      )}
+
+      {/* MODAL DE EDIÇÃO */}
       {editStudent && (
         <ModalEditarAluno
           student={editStudent}

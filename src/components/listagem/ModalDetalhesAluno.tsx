@@ -3,13 +3,15 @@ import { Cadastro } from "../../types/typeCadastro";
 interface Props {
   student: Cadastro;
   onClose: () => void;
-  onEdit: () => void; // Ação para quando clicar em "Editar"
+  onEdit: () => void;
+  onGenerateDoc: () => void; // Ação para quando clicar em "Editar"
 }
 
 export default function ModalDetalhesAluno({
   student,
   onClose,
   onEdit,
+  onGenerateDoc,
 }: Props) {
   // Helpers visuais (formatadores)
   const formatMoney = (val?: number) => `R$ ${(Number(val) || 0).toFixed(2)}`;
@@ -144,29 +146,45 @@ export default function ModalDetalhesAluno({
           </div>
         </div>
 
-        {/* RODAPÉ COM AÇÕES */}
-        <div className="p-4 bg-stone-50 border-t border-stone-100 flex justify-end gap-3">
+        <div className="p-4 bg-stone-50 border-t border-stone-100 flex justify-between items-center">
+          {/* Botão de Documento à Esquerda */}
           <button
-            onClick={onClose}
-            className="px-4 py-2 text-stone-500 hover:text-stone-700 hover:bg-stone-200 rounded-lg transition text-sm font-medium"
-          >
-            Fechar
-          </button>
-
-          <button
-            onClick={onEdit}
-            className="px-6 py-2 bg-[#8CAB91] text-white hover:bg-[#7A9B7F] rounded-lg shadow-sm hover:shadow-md transition flex items-center gap-2 font-medium"
+            onClick={onGenerateDoc}
+            className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition text-sm font-medium flex items-center gap-2 border border-blue-100"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-4 w-4"
-              viewBox="0 0 20 20"
-              fill="currentColor"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
-              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
             </svg>
-            Editar Dados
+            Gerar Contrato
           </button>
+
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-stone-500 hover:text-stone-700 hover:bg-stone-200 rounded-lg transition text-sm font-medium"
+            >
+              Fechar
+            </button>
+
+            <button
+              onClick={onEdit}
+              className="px-6 py-2 bg-[#8CAB91] text-white hover:bg-[#7A9B7F] rounded-lg shadow-sm hover:shadow-md transition flex items-center gap-2 font-medium"
+            >
+              {/* Icone Edit */}
+              Editar Dados
+            </button>
+          </div>
         </div>
       </div>
     </div>
