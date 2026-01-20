@@ -1,26 +1,29 @@
 import { Cadastro } from "../../types/typeCadastro";
-import { Icons } from "../common/Icons";
 
 interface Props {
   students: Cadastro[];
   loading: boolean;
-  onSelect: (student: Cadastro) => void; // Nova prop para lidar com o clique
+  onSelect: (student: Cadastro) => void;
+  onDelete: (student: Cadastro) => void; // <--- Já estava na interface, agora vamos usar
 }
 
-export default function StudentTable({ students, loading, onSelect }: Props) {
-  // Helpers internos para formatação visual
+export default function StudentTable({
+  students,
+  loading,
+  onSelect,
+  onDelete,
+}: Props) {
   const getInitials = (name: string) => {
     const parts = name.trim().split(" ");
     if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
-  // Cores de status ajustadas para a paleta Roncon (Tons Terrosos/Sálvia)
   const getStatusColor = (diaVencimento: string | number) => {
     const dia = Number(diaVencimento);
-    if (dia <= 10) return "bg-[#8CAB91]/20 text-[#5A7A60] border-[#8CAB91]/30"; // Verde Suave
-    if (dia <= 20) return "bg-stone-100 text-stone-600 border-stone-200"; // Neutro (Pedra)
-    return "bg-amber-50 text-amber-700 border-amber-100"; // Alerta suave
+    if (dia <= 10) return "bg-[#8CAB91]/20 text-[#5A7A60] border-[#8CAB91]/30";
+    if (dia <= 20) return "bg-stone-100 text-stone-600 border-stone-200";
+    return "bg-amber-50 text-amber-700 border-amber-100";
   };
 
   return (
@@ -32,10 +35,10 @@ export default function StudentTable({ students, loading, onSelect }: Props) {
               <th className="px-6 py-4 text-xs font-bold text-stone-500 uppercase tracking-widest w-[30%]">
                 Aluno
               </th>
-              <th className="px-6 py-4 text-xs font-bold text-stone-500 uppercase tracking-widest w-[20%]">
-                Turma
+              <th className="px-6 py-4 text-xs font-bold text-stone-500 uppercase tracking-widest w-[25%]">
+                Horário
               </th>
-              <th className="px-6 py-4 text-xs font-bold text-stone-500 uppercase tracking-widest w-[20%]">
+              <th className="px-6 py-4 text-xs font-bold text-stone-500 uppercase tracking-widest w-[15%]">
                 Status
               </th>
               <th className="px-6 py-4 text-xs font-bold text-stone-500 uppercase tracking-widest text-right w-[15%]">
@@ -69,12 +72,12 @@ export default function StudentTable({ students, loading, onSelect }: Props) {
               students.map((student, index) => (
                 <tr
                   key={index}
-                  onClick={() => onSelect(student)} // Ao clicar na linha, chama a função de seleção
+                  onClick={() => onSelect(student)}
                   className="group hover:bg-[#8CAB91]/5 transition-colors border-b border-stone-50 last:border-0 cursor-pointer relative"
                 >
+                  {/* Coluna Aluno */}
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
-                      {/* Avatar com a cor da marca */}
                       <div className="w-10 h-10 rounded-full bg-[#8CAB91] text-white flex items-center justify-center font-serif font-bold text-sm shadow-sm overflow-hidden shrink-0 border border-[#8CAB91]/20">
                         {student.fotoUrl ? (
                           <img
@@ -82,10 +85,6 @@ export default function StudentTable({ students, loading, onSelect }: Props) {
                             alt={student.nome}
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              console.error(
-                                "Falha no HTML ao ler:",
-                                `media://${student.fotoUrl}`,
-                              );
                               e.currentTarget.style.display = "none";
                             }}
                           />
@@ -93,7 +92,6 @@ export default function StudentTable({ students, loading, onSelect }: Props) {
                           <span>{getInitials(student.nome)}</span>
                         )}
                       </div>
-
                       <div className="min-w-0">
                         <div className="font-serif font-medium text-stone-800 truncate">
                           {student.nome}
@@ -104,16 +102,22 @@ export default function StudentTable({ students, loading, onSelect }: Props) {
                       </div>
                     </div>
                   </td>
+
+                  {/* Coluna Horário */}
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <span className="text-sm font-medium text-stone-700">
-                        {student.turma}
+                        {student.horarioAula || "—"}
                       </span>
-                      <span className="text-xs text-stone-500">
-                        {student.planoMensal}
+                      <span className="text-xs text-stone-500 capitalize">
+                        {student.diasSemana && student.diasSemana.length > 0
+                          ? student.diasSemana.join(", ")
+                          : "Sem dias def."}
                       </span>
                     </div>
                   </td>
+
+                  {/* Coluna Status */}
                   <td className="px-6 py-4">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(student.diaVencimento)}`}
@@ -121,20 +125,38 @@ export default function StudentTable({ students, loading, onSelect }: Props) {
                       Vence dia {student.diaVencimento}
                     </span>
                   </td>
+
+                  {/* Coluna Valor */}
                   <td className="px-6 py-4 text-right">
                     <span className="font-serif font-medium text-stone-800">
                       R$ {Number(student.valorMensalidade || 0).toFixed(2)}
                     </span>
                   </td>
+
+                  {/* Ações (LIXEIRA ADICIONADA) */}
                   <td className="px-6 py-4 text-center">
                     <button
                       onClick={(e) => {
-                        e.stopPropagation(); // Impede que o clique no botão abra o modal
-                        // Aqui você pode adicionar lógica para um menu de ações específico se necessário
+                        e.stopPropagation(); // Impede de abrir o modal de detalhes
+                        onDelete(student); // Chama a função de deletar
                       }}
-                      className="p-2 text-stone-400 hover:text-[#8CAB91] hover:bg-[#8CAB91]/10 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                      title="Excluir Aluno"
+                      className="p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all opacity-0 group-hover:opacity-100"
                     >
-                      <Icons.More />
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
                     </button>
                   </td>
                 </tr>

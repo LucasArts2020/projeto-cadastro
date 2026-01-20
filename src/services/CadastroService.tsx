@@ -6,8 +6,7 @@ export const CadastroService = {
   },
 
   create: async (data: Cadastro) => {
-    let fotoPath = data.fotoUrl; // Mantém a URL se já existir (caso de update sem foto nova)
-
+    let fotoPath = data.fotoUrl;
     if (data.fotoFile) {
       const buffer = await data.fotoFile.arrayBuffer();
       // @ts-ignore
@@ -44,5 +43,9 @@ export const CadastroService = {
       fotoUrl: fotoPath,
       fotoFile: undefined, // Não mandamos o arquivo cru pro banco
     });
+  },
+  delete: async (id: number) => {
+    // @ts-ignore
+    return await window.api.deleteCadastro(id);
   },
 };

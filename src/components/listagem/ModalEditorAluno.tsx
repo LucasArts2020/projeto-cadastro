@@ -2,13 +2,11 @@ import { useState } from "react";
 import { Cadastro } from "../../types/typeCadastro";
 import { CadastroService } from "../../services/CadastroService";
 
-// Reaproveitando os componentes existentes
 import Stepper from "../common/Stepper";
 import StepPersonalData from "../cadastro/StepPersonalData";
 import StepFinancialData from "../cadastro/StepFinancialData";
 import StepPresenceData from "../cadastro/StepPresenceData";
 import FormActions from "../cadastro/FormActions";
-import { Icons } from "../common/Icons";
 
 interface Props {
   student: Cadastro;

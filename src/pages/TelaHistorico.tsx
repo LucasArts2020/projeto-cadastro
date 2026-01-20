@@ -5,28 +5,22 @@ import {
   ClassDetailItem,
 } from "../services/AttendanceService";
 import { Icons } from "../components/common/Icons";
-// 1. Importamos os horários para usar no filtro
 import { OPCOES_HORARIOS } from "../utils/options";
 
 export default function TelaHistorico() {
-  // Estados de Dados
   const [history, setHistory] = useState<HistoricoItem[]>([]);
   const [details, setDetails] = useState<ClassDetailItem[]>([]);
-
-  // Estados de Controle
   const [loading, setLoading] = useState(true);
   const [viewState, setViewState] = useState<"LISTA" | "DETALHES">("LISTA");
   const [selectedClass, setSelectedClass] = useState<HistoricoItem | null>(
     null,
   );
 
-  // Estados do Filtro
+  // Filtros
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  // 2. Novo estado para filtrar por horário
   const [filterTime, setFilterTime] = useState("");
 
-  // Carregar lista inicial
   useEffect(() => {
     loadHistory();
   }, []);
@@ -46,8 +40,30 @@ export default function TelaHistorico() {
     }
   };
 
-  // 3. Lógica de Filtragem Local (Cliente)
-  // Filtra a lista já carregada pelo horário selecionado
+  // --- NOVA FUNÇÃO DE DELETAR ---
+  const handleDelete = async (item: HistoricoItem) => {
+    const confirmou = window.confirm(
+      `Deseja excluir o registro da aula "${item.turma}" do dia ${formatDate(item.data_aula)}?\n\nIsso apagará as presenças lançadas para esta aula.`,
+    );
+
+    if (confirmou) {
+      setLoading(true);
+      try {
+        const response = await AttendanceService.delete(item.id);
+        if (response.success) {
+          loadHistory(); // Recarrega a lista
+        } else {
+          alert("Erro ao excluir: " + response.error);
+        }
+      } catch (error) {
+        console.error(error);
+        alert("Erro de conexão.");
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   const filteredHistory = useMemo(() => {
     if (!filterTime) return history;
     return history.filter((item) => item.turma.includes(filterTime));
@@ -56,11 +72,8 @@ export default function TelaHistorico() {
   const clearFilters = () => {
     setStartDate("");
     setEndDate("");
-    setFilterTime(""); // Limpa horário também
-    setLoading(true);
-    AttendanceService.getHistory({})
-      .then(setHistory)
-      .finally(() => setLoading(false));
+    setFilterTime("");
+    loadHistory(); // Recarrega tudo limpo
   };
 
   const handleOpenDetails = async (item: HistoricoItem) => {
@@ -85,13 +98,14 @@ export default function TelaHistorico() {
   };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return "";
     const [year, month, day] = dateString.split("-");
     return `${day}/${month}/${year}`;
   };
 
   return (
     <div className="flex flex-col h-full bg-gray-50/30 relative">
-      {/* --- HEADER --- */}
+      {/* HEADER */}
       <div className="p-6 border-b border-gray-100 bg-white shadow-sm flex flex-col gap-4 sticky top-0 z-10">
         <div className="flex items-center gap-4">
           {viewState === "DETALHES" && (
@@ -117,10 +131,9 @@ export default function TelaHistorico() {
           </div>
         </div>
 
-        {/* --- BARRA DE FILTROS --- */}
+        {/* FILTROS (Apenas na Lista) */}
         {viewState === "LISTA" && (
           <div className="flex flex-wrap items-end gap-3 mt-2 animate-fade-in">
-            {/* Input Data Início */}
             <div>
               <label className="block text-xs font-bold text-gray-400 mb-1 ml-1 uppercase">
                 De
@@ -132,8 +145,6 @@ export default function TelaHistorico() {
                 className="px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-[#8CAB91] outline-none bg-gray-50 text-gray-600"
               />
             </div>
-
-            {/* Input Data Fim */}
             <div>
               <label className="block text-xs font-bold text-gray-400 mb-1 ml-1 uppercase">
                 Até
@@ -145,8 +156,6 @@ export default function TelaHistorico() {
                 className="px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-[#8CAB91] outline-none bg-gray-50 text-gray-600"
               />
             </div>
-
-            {/* 4. NOVO FILTRO: HORÁRIO */}
             <div className="w-32">
               <label className="block text-xs font-bold text-gray-400 mb-1 ml-1 uppercase">
                 Horário
@@ -164,17 +173,12 @@ export default function TelaHistorico() {
                 ))}
               </select>
             </div>
-
-            {/* Botão Filtrar */}
             <button
               onClick={loadHistory}
               className="px-6 py-2 bg-[#2C2C2C] text-white rounded-xl text-sm font-medium hover:bg-black transition-colors shadow-lg shadow-black/10 flex items-center gap-2 h-[38px]"
             >
-              <Icons.Filter />
-              Filtrar
+              <Icons.Filter /> Filtrar
             </button>
-
-            {/* Botão Limpar */}
             {(startDate || endDate || filterTime) && (
               <button
                 onClick={clearFilters}
@@ -187,13 +191,13 @@ export default function TelaHistorico() {
         )}
       </div>
 
-      {/* --- CONTEÚDO --- */}
+      {/* CONTEÚDO */}
       <div className="flex-1 p-6 overflow-y-auto pb-20">
         {loading && (
           <div className="text-center py-10 text-gray-400">Carregando...</div>
         )}
 
-        {/* LISTA */}
+        {/* LISTA DE HISTÓRICO */}
         {!loading && viewState === "LISTA" && (
           <div className="space-y-4 max-w-4xl mx-auto">
             {filteredHistory.length === 0 ? (
@@ -202,19 +206,17 @@ export default function TelaHistorico() {
                 <p>Nenhum registro encontrado.</p>
               </div>
             ) : (
-              // 5. Usamos filteredHistory aqui em vez de history
               filteredHistory.map((item) => (
                 <div
                   key={item.id}
                   onClick={() => handleOpenDetails(item)}
-                  className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-[#8CAB91]/30 hover:-translate-y-1 transition-all cursor-pointer flex justify-between items-center group"
+                  className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-[#8CAB91]/30 hover:-translate-y-1 transition-all cursor-pointer flex justify-between items-center group relative pr-14" // Adicionado pr-14 para dar espaço pro botão
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-gray-100 text-gray-400 group-hover:bg-[#8CAB91] group-hover:text-white rounded-full flex items-center justify-center transition-colors">
                       <Icons.FileText />
                     </div>
                     <div>
-                      {/* Como o nome agora é "Treino das 19:00", ele aparecerá aqui */}
                       <h3 className="text-lg font-bold text-gray-800">
                         {item.turma}
                       </h3>
@@ -224,7 +226,7 @@ export default function TelaHistorico() {
                     </div>
                   </div>
 
-                  <div className="text-right">
+                  <div className="text-right mr-4">
                     <span className="text-2xl font-bold text-[#8CAB91]">
                       {item.presentes}
                     </span>
@@ -236,6 +238,31 @@ export default function TelaHistorico() {
                       Presentes
                     </p>
                   </div>
+
+                  {/* BOTÃO DE DELETAR NOVO */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation(); // Impede abrir detalhes
+                      handleDelete(item);
+                    }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+                    title="Excluir Registro"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </button>
                 </div>
               ))
             )}
@@ -279,14 +306,7 @@ export default function TelaHistorico() {
               {details.map((aluno) => (
                 <div
                   key={aluno.studentId}
-                  className={`
-                    flex items-center gap-4 p-4 rounded-xl border transition-all
-                    ${
-                      aluno.status === "presente"
-                        ? "bg-white border-[#8CAB91]/30 shadow-sm"
-                        : "bg-gray-50 border-gray-200 opacity-70"
-                    }
-                  `}
+                  className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${aluno.status === "presente" ? "bg-white border-[#8CAB91]/30 shadow-sm" : "bg-gray-50 border-gray-200 opacity-70"}`}
                 >
                   <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden border border-gray-100 shrink-0">
                     {aluno.fotoUrl ? (
@@ -301,7 +321,6 @@ export default function TelaHistorico() {
                       </div>
                     )}
                   </div>
-
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-gray-800 truncate">
                       {aluno.nome}

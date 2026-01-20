@@ -48,4 +48,8 @@ export const AttendanceService = {
     // @ts-ignore
     return await window.api.getClassDetails(classId);
   },
+  delete: async (id: number) => {
+    // @ts-ignore
+    return await window.api.deleteClass(id);
+  },
 };

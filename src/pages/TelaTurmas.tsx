@@ -20,7 +20,9 @@ export default function TelaTurmas() {
   const [students, setStudents] = useState<Cadastro[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState<ViewState>("SELECAO");
-  const [diaFiltro, setDiaFiltro] = useState<string>(getDiaAtualFormatado());
+
+  // INICIALIZAÇÃO INTELIGENTE: Pega o dia da semana atual do sistema
+  const [diaFiltro, setDiaFiltro] = useState<string>(getDiaAtualSigla());
 
   // --- Estados da Chamada ---
   const [selectedGroup, setSelectedGroup] = useState<ClassGroup | null>(null);
@@ -43,29 +45,40 @@ export default function TelaTurmas() {
     }
   };
 
-  function getDiaAtualFormatado() {
+  // --- HELPERS DE DATA ---
+
+  // 1. Pega a sigla para o filtro (Ex: "Seg", "Ter")
+  function getDiaAtualSigla() {
     const dias = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
     const hoje = new Date().getDay();
-    return dias[hoje] === "Dom" ? "Seg" : dias[hoje]; // Se for domingo, joga pra segunda
+    // Se for domingo, joga para segunda (ou mantenha Dom se tiver aula domingo)
+    return dias[hoje] === "Dom" ? "Seg" : dias[hoje];
   }
 
-  // --- LÓGICA DE AGRUPAMENTO (O segredo da nova tela) ---
+  // 2. Pega a data formatada para exibição (Ex: "19 de Janeiro de 2026")
+  function getDataExibicao() {
+    return new Date().toLocaleDateString("pt-BR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  }
+
+  // --- LÓGICA DE AGRUPAMENTO ---
   const turmasDoDia = useMemo(() => {
     const groups: Record<string, ClassGroup> = {};
 
     students.forEach((aluno) => {
-      // 1. Verifica se o aluno frequenta esse dia
+      // Verifica se o aluno frequenta esse dia
       const frequentaHoje =
         aluno.diasSemana && aluno.diasSemana.includes(diaFiltro);
 
       if (frequentaHoje) {
-        // AGORA A CHAVE É SÓ O HORÁRIO
         const horario = aluno.horarioAula || "Sem Horário";
 
-        // Se o horário ainda não existe no grupo, cria
         if (!groups[horario]) {
           groups[horario] = {
-            turma: `Treino das ${horario}`, // Nome bonito para o Card
+            turma: `Treino das ${horario}`,
             horario: horario,
             totalAlunos: 0,
             alunos: [],
@@ -77,16 +90,16 @@ export default function TelaTurmas() {
       }
     });
 
-    // Retorna array ordenado por horário (Ex: 06:00 vem antes de 19:00)
     return Object.values(groups).sort((a, b) =>
       a.horario.localeCompare(b.horario),
     );
   }, [students, diaFiltro]);
+
   // --- AÇÕES ---
 
   const handleSelectClass = (group: ClassGroup) => {
     setSelectedGroup(group);
-    setPresencas({}); // Reseta presenças anteriores
+    setPresencas({});
     setCurrentView("CHAMADA");
   };
 
@@ -102,15 +115,22 @@ export default function TelaTurmas() {
   const handleFinalizar = async () => {
     if (!selectedGroup) return;
 
-    // Quem não foi marcado recebe "falta" por padrão
     const registros = selectedGroup.alunos.map((student) => ({
       studentId: student.id!,
       status: presencas[student.id!] || "falta",
     }));
 
+    // CORREÇÃO DE DATA PARA O BRASIL (Evita erro de fuso horário UTC)
+    const dataLocal = new Date()
+      .toLocaleDateString("pt-BR")
+      .split("/")
+      .reverse()
+      .join("-");
+    // Isso gera YYYY-MM-DD com base na hora local do computador
+
     const payload = {
       turma: selectedGroup.turma,
-      dataAula: new Date().toISOString().split("T")[0],
+      dataAula: dataLocal,
       registros,
     };
 
@@ -118,8 +138,6 @@ export default function TelaTurmas() {
       const response = await AttendanceService.save(payload);
       if (response.success) {
         setShowSuccess(true);
-        // Não reseta a tela imediatamente para o usuário ver o feedback,
-        // mas quando fechar o popup volta para a seleção
       } else {
         alert("Erro ao salvar: " + response.error);
       }
@@ -133,7 +151,7 @@ export default function TelaTurmas() {
 
   return (
     <div className="flex flex-col h-full relative bg-gray-50/30">
-      {/* --- HEADER COMUM --- */}
+      {/* --- HEADER COM DATA DE HOJE --- */}
       <div className="p-6 border-b border-gray-100 bg-white flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-10 shadow-sm">
         <div className="flex items-center gap-3">
           {currentView === "CHAMADA" && (
@@ -145,11 +163,19 @@ export default function TelaTurmas() {
             </button>
           )}
           <div>
-            <h2 className="text-2xl font-serif text-gray-800">
+            <h2 className="text-2xl font-serif text-gray-800 flex items-center gap-2">
               {currentView === "SELECAO"
                 ? "Turmas do Dia"
                 : `Chamada: ${selectedGroup?.turma}`}
+
+              {/* Tag com a data de hoje para confirmar sincronização */}
+              {currentView === "SELECAO" && (
+                <span className="text-xs font-sans font-normal bg-[#8CAB91]/10 text-[#5A7A60] px-2 py-1 rounded-md border border-[#8CAB91]/20">
+                  {getDataExibicao()}
+                </span>
+              )}
             </h2>
+
             <p className="text-sm text-gray-500">
               {currentView === "SELECAO"
                 ? "Selecione uma turma para realizar a chamada."
@@ -158,18 +184,18 @@ export default function TelaTurmas() {
           </div>
         </div>
 
-        {/* Filtro de Dia (Sempre visível para facilitar troca rápida) */}
-        <div className="flex bg-gray-100 p-1 rounded-lg">
+        {/* Filtro de Dia */}
+        <div className="flex bg-gray-100 p-1 rounded-lg overflow-x-auto max-w-full">
           {["Seg", "Ter", "Qua", "Qui", "Sex", "Sab"].map((dia) => (
             <button
               key={dia}
               onClick={() => {
                 setDiaFiltro(dia);
-                if (currentView === "CHAMADA") handleBackToSelection(); // Se trocar dia, volta pra seleção
+                if (currentView === "CHAMADA") handleBackToSelection();
               }}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
                 diaFiltro === dia
-                  ? "bg-white text-[#2C2C2C] shadow-sm"
+                  ? "bg-white text-[#2C2C2C] shadow-sm border border-gray-200"
                   : "text-gray-400 hover:text-gray-600"
               }`}
             >
@@ -182,15 +208,17 @@ export default function TelaTurmas() {
       {/* --- CONTEÚDO PRINCIPAL --- */}
       <div className="flex-1 p-6 overflow-y-auto pb-24">
         {loading && (
-          <div className="text-center py-10 text-gray-400">Carregando...</div>
+          <div className="text-center py-10 text-gray-400 animate-pulse">
+            Sincronizando dados...
+          </div>
         )}
 
-        {/* VISTA 1: SELEÇÃO DE TURMAS (CARDS) */}
+        {/* VISTA 1: SELEÇÃO DE TURMAS */}
         {!loading && currentView === "SELECAO" && (
           <>
             {turmasDoDia.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-                <div className="w-16 h-16 mb-4 bg-gray-100 rounded-full flex items-center justify-center text-2xl">
+                <div className="w-16 h-16 mb-4 bg-gray-100 rounded-full flex items-center justify-center text-2xl grayscale opacity-50">
                   📅
                 </div>
                 <p>Nenhuma turma encontrada para {diaFiltro}.</p>
@@ -205,10 +233,9 @@ export default function TelaTurmas() {
                   >
                     <div className="flex justify-between items-start w-full mb-4">
                       <div className="bg-[#8CAB91]/10 text-[#8CAB91] p-3 rounded-xl group-hover:bg-[#8CAB91] group-hover:text-white transition-colors">
-                        <Icons.Users />{" "}
-                        {/* Certifique-se que o ícone Users existe ou troque */}
+                        <Icons.Users />
                       </div>
-                      <span className="text-xs font-bold bg-gray-100 text-gray-600 px-3 py-1 rounded-full">
+                      <span className="text-xs font-bold bg-gray-100 text-gray-600 px-3 py-1 rounded-full border border-gray-200">
                         {grupo.horario}
                       </span>
                     </div>
@@ -230,7 +257,7 @@ export default function TelaTurmas() {
           </>
         )}
 
-        {/* VISTA 2: LISTA DE CHAMADA (ALUNOS) */}
+        {/* VISTA 2: LISTA DE CHAMADA */}
         {!loading && currentView === "CHAMADA" && selectedGroup && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in-up">
             {selectedGroup.alunos.map((student) => (
@@ -245,14 +272,14 @@ export default function TelaTurmas() {
         )}
       </div>
 
-      {/* --- BOTÃO FLUTUANTE (SÓ NA CHAMADA) --- */}
+      {/* --- BOTÃO FLUTUANTE --- */}
       {currentView === "CHAMADA" && (
         <div className="absolute bottom-6 left-0 right-0 flex justify-center z-20 pointer-events-none">
           <button
             onClick={handleFinalizar}
             className="pointer-events-auto bg-[#2C2C2C] text-white px-8 py-4 rounded-full shadow-2xl shadow-black/30 hover:scale-105 active:scale-95 transition-all font-bold tracking-wide flex items-center gap-3 border-4 border-gray-50"
           >
-            <Icons.CheckCircle className="w-5 h-5 text-[#8CAB91]" />
+            <Icons.CheckCircle />
             Confirmar Presenças
           </button>
         </div>
@@ -273,18 +300,20 @@ export default function TelaTurmas() {
             <h2 className="text-2xl font-bold text-gray-800 mb-2">
               Chamada Finalizada!
             </h2>
-            <p className="text-gray-500">
-              A presença da turma <b>{selectedGroup?.turma}</b> das{" "}
-              <b>{selectedGroup?.horario}</b> foi salva com sucesso.
+            <p className="text-gray-500 mb-2">
+              A presença da turma <b>{selectedGroup?.turma}</b> foi salva.
+            </p>
+            <p className="text-xs text-gray-400 uppercase tracking-widest border-t border-gray-100 pt-2 mt-2">
+              Data: {getDataExibicao()}
             </p>
             <button
               onClick={() => {
                 setShowSuccess(false);
                 handleBackToSelection();
               }}
-              className="mt-6 bg-gray-800 text-white px-6 py-2 rounded-lg hover:bg-black transition-colors"
+              className="mt-6 bg-gray-800 text-white px-6 py-2 rounded-lg hover:bg-black transition-colors w-full"
             >
-              Voltar para Turmas
+              Fechar
             </button>
           </div>
         </Popup>
@@ -293,8 +322,7 @@ export default function TelaTurmas() {
   );
 }
 
-// --- COMPONENTES AUXILIARES ---
-
+// --- COMPONENTE AUXILIAR (MANTIDO) ---
 function CardChamada({
   student,
   status,
@@ -313,61 +341,45 @@ function CardChamada({
       ${status === "pendente" ? "border-gray-100 hover:border-gray-300" : ""}
     `}
     >
-      {/* Foto */}
-      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0 border border-gray-200">
+      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0 border border-gray-200 text-gray-400 font-bold">
         {student.fotoUrl ? (
           <img
             src={`media://${student.fotoUrl}`}
-            alt={student.nome}
+            alt=""
             className="w-full h-full object-cover"
           />
         ) : (
-          <span className="text-lg font-bold text-gray-400">
-            {student.nome.charAt(0)}
-          </span>
+          student.nome[0]
         )}
       </div>
 
-      {/* Info */}
       <div className="flex-1 min-w-0">
         <h4
-          className={`font-semibold truncate transition-colors ${status === "falta" ? "text-gray-400" : "text-gray-800"}`}
+          className={`font-semibold truncate ${status === "falta" ? "text-gray-400" : "text-gray-800"}`}
         >
           {student.nome}
         </h4>
         <div className="flex items-center gap-2 text-xs text-gray-500">
-          {/* Status Label opcional */}
           {status === "presente" && (
             <span className="text-[#8CAB91] font-bold">Presente</span>
           )}
           {status === "falta" && (
             <span className="text-red-400 font-bold">Falta</span>
           )}
-          {status === "pendente" && <span>Aguardando...</span>}
+          {status === "pendente" && <span>Pendente</span>}
         </div>
       </div>
 
-      {/* Botões */}
       <div className="flex items-center gap-2">
         <button
           onClick={() => onMark(student.id!, "presente")}
-          title="Marcar Presença"
-          className={`p-2 rounded-lg transition-all ${
-            status === "presente"
-              ? "bg-[#8CAB91] text-white shadow-md scale-110"
-              : "bg-gray-50 text-gray-300 hover:bg-[#8CAB91]/20 hover:text-[#8CAB91]"
-          }`}
+          className={`p-2 rounded-lg transition-all ${status === "presente" ? "bg-[#8CAB91] text-white" : "bg-gray-50 hover:bg-[#8CAB91]/20 text-gray-300 hover:text-[#8CAB91]"}`}
         >
           <Icons.CheckCircle />
         </button>
         <button
           onClick={() => onMark(student.id!, "falta")}
-          title="Marcar Falta"
-          className={`p-2 rounded-lg transition-all ${
-            status === "falta"
-              ? "bg-red-500 text-white shadow-md scale-110"
-              : "bg-gray-50 text-gray-300 hover:bg-red-100 hover:text-red-500"
-          }`}
+          className={`p-2 rounded-lg transition-all ${status === "falta" ? "bg-red-500 text-white" : "bg-gray-50 hover:bg-red-100 text-gray-300 hover:text-red-500"}`}
         >
           <Icons.XCircle />
         </button>
