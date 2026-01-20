@@ -133,7 +133,6 @@ ipcMain.handle("save-image", (_, file) => {
 ipcMain.handle("update-aluno", (event, dados) => {
   return studentRepo.update(dados);
 });
-// Procure onde estão os outros handlers (create-aluno, update-aluno...) e adicione:
 
 ipcMain.handle("delete-aluno", async (_, id) => {
   return studentRepo.delete(id);

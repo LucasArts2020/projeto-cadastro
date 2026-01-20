@@ -24,13 +24,6 @@ export default function Header() {
           Painel Administrativo
         </p>
       </div>
-
-      <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-full bg-stone-50 border border-stone-200 flex items-center justify-center text-stone-400 hover:text-[#8CAB91] hover:border-[#8CAB91] transition-all cursor-pointer relative">
-          🔔
-          <span className="absolute top-2 right-2 w-2 h-2 bg-[#8CAB91] rounded-full border border-white"></span>
-        </div>
-      </div>
     </header>
   );
 }

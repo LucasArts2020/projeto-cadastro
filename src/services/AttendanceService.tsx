@@ -1,5 +1,3 @@
-import { Cadastro } from "../types/typeCadastro";
-
 export interface AttendancePayload {
   turma: string;
   dataAula: string;
