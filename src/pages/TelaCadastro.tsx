@@ -13,7 +13,7 @@ interface Props {
   onSuccess?: () => void;
 }
 
-interface PopupState {
+export interface PopupState {
   open: boolean;
   key: number;
 }

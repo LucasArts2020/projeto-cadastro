@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { CadastroService } from "../services/CadastroService";
 import { Cadastro } from "../types/typeCadastro";
+import Popup from "../components/layout/popup";
 
 import ActionBar from "../components/listagem/ActionBar";
 import StudentTable from "../components/listagem/StudentTable";
@@ -14,11 +15,18 @@ import ModalFiltros, {
   FilterOptions,
 } from "../components/listagem/ModalFiltros";
 
+import { PopupState } from "./TelaCadastro";
 export default function TelaListagem() {
   const navigate = useNavigate();
   const [students, setStudents] = useState<Cadastro[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  const [showpopup, setShowPopup] = useState<PopupState>({
+    open: false,
+    key: 0,
+  });
+  const [studentToDelete, setStudentToDelete] = useState<Cadastro | null>(null);
 
   // ESTADOS DE FILTRO
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -51,21 +59,27 @@ export default function TelaListagem() {
   };
 
   const handleDelete = async (student: Cadastro) => {
-    const confirmou = window.confirm(
-      `Tem certeza que deseja excluir o aluno ${student.nome}?`,
-    );
-    if (confirmou && student.id) {
-      setLoading(true);
-      try {
-        const response = await CadastroService.delete(student.id);
-        if (response.success) loadStudents();
-        else alert("Erro ao excluir: " + response.error);
-      } catch (error) {
-        console.error(error);
-        alert("Erro ao tentar excluir.");
-      } finally {
-        setLoading(false);
+    setStudentToDelete(student);
+    setShowPopup({ open: true, key: 4 });
+  };
+  const confirmDelete = async () => {
+    if (!studentToDelete?.id) return;
+
+    setLoading(true);
+    try {
+      const response = await CadastroService.delete(studentToDelete.id);
+      if (response.success) {
+        loadStudents();
+      } else {
+        alert("Erro ao excluir: " + response.error);
       }
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao tentar excluir.");
+    } finally {
+      setLoading(false);
+      setShowPopup({ open: false, key: 0 });
+      setStudentToDelete(null);
     }
   };
 
@@ -173,6 +187,35 @@ export default function TelaListagem() {
             setEditStudent(null);
           }}
         />
+      )}
+      {showpopup.open && showpopup.key === 4 && (
+        <Popup
+          onClose={() => setShowPopup({ open: false, key: 0 })}
+          actions={
+            <>
+              <button
+                onClick={() => setShowPopup({ open: false, key: 0 })}
+                className="px-4 py-2 rounded-lg bg-[#8CAB91] text-white hover:bg-[#647e68]"
+              >
+                Cancelar
+              </button>
+
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+              >
+                Excluir
+              </button>
+            </>
+          }
+        >
+          <h2 className="text-lg font-semibold mb-4">Confirmar exclusão</h2>
+
+          <p className="text-stone-600">
+            Tem certeza que deseja excluir o aluno{" "}
+            <strong>{studentToDelete?.nome}</strong>?
+          </p>
+        </Popup>
       )}
     </div>
   );

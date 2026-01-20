@@ -68,31 +68,21 @@ app.on("window-all-closed", () => {
 app.whenReady().then(async () => {
   protocol.handle("media", (request) => {
     try {
-      // 1. Pegamos a URL e removemos o protocolo
       const url = new URL(request.url);
 
-      // No Windows, o 'C:' vira o 'hostname' e o resto vira o 'pathname'
-      // Combinamos os dois para reconstruir o caminho original
       let filePath = decodeURIComponent(url.hostname + url.pathname);
 
-      // 2. Se o caminho começar com uma barra (ex: /C:/Users), removemos essa primeira barra
       if (filePath.startsWith("/")) {
         filePath = filePath.slice(1);
       }
 
-      // 3. Se por algum motivo o ':' sumiu (como no seu erro), nós o colocamos de volta
-      // Isso corrige 'c/Users' para 'c:/Users'
       if (filePath.match(/^[a-zA-Z]\//)) {
         filePath = filePath[0] + ":" + filePath.slice(1);
       }
 
       const finalizedPath = path.normalize(filePath);
 
-      // LOG DE VERIFICAÇÃO FINAL
-      console.log("Caminho Processado:", finalizedPath);
-
       if (!fs.existsSync(finalizedPath)) {
-        console.error(`[ERRO CRÍTICO] Arquivo não existe: ${finalizedPath}`);
         return new Response("Arquivo não encontrado", { status: 404 });
       }
 
