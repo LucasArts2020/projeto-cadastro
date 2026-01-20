@@ -6,17 +6,14 @@ export const CadastroService = {
   },
 
   create: async (data: Cadastro) => {
-    let fotoPath: string | null = null;
-
+    let fotoPath = data.fotoUrl;
     if (data.fotoFile) {
-      console.log("Arquivo recebido:", data.fotoFile);
       const buffer = await data.fotoFile.arrayBuffer();
-      // @ts-ignore (se der erro de tipo no window.api)
+      // @ts-ignore
       fotoPath = await window.api.saveImage({
         name: data.fotoFile.name,
         buffer,
       });
-      console.log("Imagem salva em:", fotoPath);
     }
 
     return await window.api.createCadastro({
@@ -24,5 +21,31 @@ export const CadastroService = {
       fotoUrl: fotoPath,
       fotoFile: undefined,
     });
+  },
+
+  // --- NOVA FUNÇÃO DE UPDATE ---
+  update: async (data: Cadastro) => {
+    let fotoPath = data.fotoUrl;
+
+    // Se o usuário selecionou uma NOVA foto
+    if (data.fotoFile) {
+      const buffer = await data.fotoFile.arrayBuffer();
+      // @ts-ignore
+      fotoPath = await window.api.saveImage({
+        name: data.fotoFile.name,
+        buffer,
+      });
+    }
+
+    // @ts-ignore
+    return await window.api.updateCadastro({
+      ...data,
+      fotoUrl: fotoPath,
+      fotoFile: undefined, // Não mandamos o arquivo cru pro banco
+    });
+  },
+  delete: async (id: number) => {
+    // @ts-ignore
+    return await window.api.deleteCadastro(id);
   },
 };

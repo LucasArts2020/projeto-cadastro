@@ -21,7 +21,13 @@ export default function App() {
 
           <main className="flex-1 p-8 overflow-y-auto">
             <Routes>
-              <Route path="/" element={<WrapperCadastro />} />
+              {/* --- MUDANÇA AQUI --- */}
+              {/* Antes estava WrapperCadastro, agora trocamos para WrapperLista */}
+              <Route path="/" element={<WrapperLista />} />
+
+              {/* Você pode manter a rota /lista se quiser, ou mudar o cadastro para uma rota específica */}
+              <Route path="/cadastro" element={<WrapperCadastro />} />
+
               <Route path="/lista" element={<WrapperLista />} />
               <Route path="/turmas" element={<WrapperTurmas />} />
               <Route path="/historico" element={<WrapperHistorico />} />

@@ -13,4 +13,7 @@ contextBridge.exposeInMainWorld("api", {
   saveAttendance: (data: any) => ipcRenderer.invoke("save-attendance", data),
   getAttendanceHistory: () => ipcRenderer.invoke("get-attendance-history"),
   getClassDetails: (id: number) => ipcRenderer.invoke("get-class-details", id),
+  updateCadastro: (data: any) => ipcRenderer.invoke("update-aluno", data),
+  deleteCadastro: (id: number) => ipcRenderer.invoke("delete-aluno", id),
+  deleteClass: (id: number) => ipcRenderer.invoke("delete-class", id),
 });

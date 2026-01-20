@@ -1,4 +1,3 @@
-// src/components/cadastro/StepPersonalData.tsx
 import FormInput from "../common/FormInput";
 import { Cadastro } from "../../types/typeCadastro";
 
@@ -8,6 +7,14 @@ interface Props {
 }
 
 export default function StepPersonalData({ data, onChange }: Props) {
+  // Função para formatar o caminho da imagem corretamente
+  const getPhotoUrl = () => {
+    if (!data.fotoUrl) return undefined;
+    // Substitui barras invertidas por barras normais para não quebrar o HTML
+    const cleanPath = data.fotoUrl.replace(/\\/g, "/");
+    return `media://${cleanPath}`;
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
       <div className="col-span-2">
@@ -15,8 +22,19 @@ export default function StepPersonalData({ data, onChange }: Props) {
           Quem é o aluno?
         </h3>
         <p className="text-sm text-gray-500">
-          Preencha os dados de identificação.
+          Preencha os dados de identificação e escolha uma foto.
         </p>
+      </div>
+
+      <div className="col-span-2 flex justify-center mb-4">
+        <FormInput<Cadastro>
+          label="Foto do Perfil"
+          name="fotoFile"
+          type="file"
+          value={data.fotoFile}
+          onChange={onChange}
+          currentPhotoUrl={getPhotoUrl()} // <--- ESTA LINHA É QUE FAZ A MÁGICA
+        />
       </div>
 
       <FormInput<Cadastro>
@@ -70,17 +88,6 @@ export default function StepPersonalData({ data, onChange }: Props) {
         className="col-span-2"
         placeholder="Rua, Número, Bairro"
       />
-
-      <div className="col-span-2 bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex items-center gap-4">
-        <div className="bg-indigo-200 p-2 rounded-full text-indigo-700">📷</div>
-        <FormInput<Cadastro>
-          label="Foto do Perfil (Opcional)"
-          name="fotoUrl"
-          type="file"
-          onChange={onChange}
-          className="flex-1"
-        />
-      </div>
     </div>
   );
 }

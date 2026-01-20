@@ -149,4 +149,90 @@ export class StudentRepository {
 
     return filePath;
   }
+
+  // --- FUNÇÃO UPDATE CORRIGIDA ---
+  update(student: Student): ApiResponse {
+    try {
+      const db = this.dbManager.getInstance();
+
+      // Tratamentos de dados (iguais ao create)
+      const diaVencimentoSafe = parseInt(String(student.diaVencimento || 0));
+      const diasSemanaString = JSON.stringify(student.diasSemana || []);
+
+      // Agora usamos os nomes de coluna corretos (camelCase) e Prepared Statement
+      const stmt = db.prepare(`
+        UPDATE students 
+        SET 
+          nome = $nome,
+          rg = $rg,
+          cpf = $cpf,
+          dataNascimento = $dataNascimento,
+          telefone = $telefone,
+          telefoneEmergencia = $telefoneEmergencia,
+          endereco = $endereco,
+          turma = $turma,
+          diasSemana = $diasSemana,
+          horarioAula = $horarioAula,
+          valorMatricula = $valorMatricula,
+          planoMensal = $planoMensal,
+          valorMensalidade = $valorMensalidade,
+          formaPagamento = $formaPagamento,
+          diaVencimento = $diaVencimento,
+          foto = $foto
+        WHERE id = $id
+      `);
+
+      const params: Record<string, SqlValue> = {
+        $id: student.id!,
+        $nome: student.nome,
+        $rg: student.rg,
+        $cpf: student.cpf,
+        // Correção: nome da coluna é dataNascimento, não data_nascimento
+        $dataNascimento: student.dataNascimento,
+        $telefone: student.telefone,
+        // Correção: Mapeia telefone2 -> telefoneEmergencia
+        $telefoneEmergencia: student.telefone2 || "",
+        $endereco: student.endereco,
+        $turma: student.turma,
+        // Correção: nome da coluna diasSemana e converte para string
+        $diasSemana: diasSemanaString,
+        $horarioAula: student.horarioAula || "",
+        $valorMatricula: student.valorMatricula,
+        $planoMensal: student.planoMensal,
+        $valorMensalidade: student.valorMensalidade,
+        $formaPagamento: student.formaPagamento,
+        $diaVencimento: diaVencimentoSafe,
+        // Correção: Mapeia fotoUrl -> foto
+        $foto: student.fotoUrl || null,
+      };
+
+      stmt.run(params);
+      stmt.free();
+
+      this.dbManager.save();
+      return { success: true };
+    } catch (error: unknown) {
+      let msg = "Erro desconhecido ao atualizar";
+      if (error instanceof Error) msg = error.message;
+      console.error("Erro no repository update:", msg);
+      return { success: false, error: msg };
+    }
+  }
+  delete(id: number): ApiResponse {
+    try {
+      const db = this.dbManager.getInstance();
+
+      const stmt = db.prepare("DELETE FROM students WHERE id = $id");
+      stmt.run({ $id: id });
+      stmt.free();
+
+      this.dbManager.save();
+      return { success: true };
+    } catch (error: unknown) {
+      let msg = "Erro ao deletar";
+      if (error instanceof Error) msg = error.message;
+      console.error("Erro no repository delete:", msg);
+      return { success: false, error: msg };
+    }
+  }
 }

@@ -3,15 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { CadastroService } from "../services/CadastroService";
 import { Cadastro } from "../types/typeCadastro";
 
-import SummaryCards from "../components/listagem/SummaryCards";
 import ActionBar from "../components/listagem/ActionBar";
 import StudentTable from "../components/listagem/StudentTable";
+import ModalEditarAluno from "../components/listagem/ModalEditorAluno";
+import ModalDetalhesAluno from "../components/listagem/ModalDetalhesAluno";
 
 export default function TelaListagem() {
   const navigate = useNavigate();
   const [students, setStudents] = useState<Cadastro[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Estados dos Modais
+  const [viewStudent, setViewStudent] = useState<Cadastro | null>(null);
+  const [editStudent, setEditStudent] = useState<Cadastro | null>(null);
 
   useEffect(() => {
     loadStudents();
@@ -29,6 +34,32 @@ export default function TelaListagem() {
     }
   };
 
+  // --- FUNÇÃO DE DELETAR ---
+  const handleDelete = async (student: Cadastro) => {
+    const confirmou = window.confirm(
+      `Tem certeza que deseja excluir o aluno ${student.nome}? \nEssa ação não pode ser desfeita.`,
+    );
+
+    if (confirmou && student.id) {
+      setLoading(true);
+      try {
+        const response = await CadastroService.delete(student.id);
+
+        if (response.success) {
+          loadStudents();
+        } else {
+          alert("Erro ao excluir: " + response.error);
+        }
+      } catch (error) {
+        console.error(error);
+        alert("Erro ao tentar excluir.");
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  // Filtros de Pesquisa
   const filteredStudents = useMemo(() => {
     return students.filter(
       (s) =>
@@ -38,28 +69,46 @@ export default function TelaListagem() {
     );
   }, [students, searchTerm]);
 
-  const totalAlunos = students.length;
-  const receitaEstimada = students.reduce(
-    (acc, curr) => acc + (Number(curr.valorMensalidade) || 0),
-    0,
-  );
-  const mediaMensalidade = totalAlunos > 0 ? receitaEstimada / totalAlunos : 0;
-
   return (
     <div className="space-y-6 animate-fade-in pb-20">
-      <SummaryCards
-        total={totalAlunos}
-        receita={receitaEstimada}
-        ticketMedio={mediaMensalidade}
-      />
+      {/* REMOVIDO: SummaryCards e os cálculos associados */}
 
       <ActionBar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        onNewStudent={() => navigate("/")}
+        onNewStudent={() => navigate("/cadastro")}
       />
 
-      <StudentTable students={filteredStudents} loading={loading} />
+      <StudentTable
+        students={filteredStudents}
+        loading={loading}
+        onSelect={(student) => setViewStudent(student)}
+        onDelete={handleDelete}
+      />
+
+      {/* Modal de Detalhes (Leitura) */}
+      {viewStudent && (
+        <ModalDetalhesAluno
+          student={viewStudent}
+          onClose={() => setViewStudent(null)}
+          onEdit={() => {
+            setEditStudent(viewStudent);
+            setViewStudent(null);
+          }}
+        />
+      )}
+
+      {/* Modal de Edição (Escrita) */}
+      {editStudent && (
+        <ModalEditarAluno
+          student={editStudent}
+          onClose={() => setEditStudent(null)}
+          onSuccess={() => {
+            loadStudents();
+            setEditStudent(null);
+          }}
+        />
+      )}
     </div>
   );
 }

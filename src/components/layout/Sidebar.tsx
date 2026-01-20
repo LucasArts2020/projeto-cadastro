@@ -13,7 +13,6 @@ export default function Sidebar() {
     <aside className="w-64 bg-[#2C2C2C] text-white flex flex-col fixed h-full z-20 shadow-xl border-r border-white/5">
       {/* Logo Roncon Studio */}
       <div className="h-24 flex flex-col items-center justify-center border-b border-white/5 py-4">
-        {/* Simulação do Logo da Imagem */}
         <div className="w-12 h-12 rounded-full border-2 border-white flex items-center justify-center mb-2">
           <span className="text-2xl font-serif">R</span>
         </div>
@@ -33,18 +32,9 @@ export default function Sidebar() {
           Menu
         </p>
 
+        {/* MUDANÇA 1: Alunos agora é a Home (/) e vem primeiro */}
         <NavLink
           to="/"
-          className={({ isActive }) =>
-            `${linkClass} ${isActive ? activeClass : inactiveClass}`
-          }
-        >
-          <Icons.AddUser />
-          <span>Matrícula</span>
-        </NavLink>
-
-        <NavLink
-          to="/lista"
           className={({ isActive }) =>
             `${linkClass} ${isActive ? activeClass : inactiveClass}`
           }
@@ -52,24 +42,35 @@ export default function Sidebar() {
           <Icons.Users />
           <span>Alunos</span>
         </NavLink>
+
+        {/* MUDANÇA 2: Matrícula aponta para /cadastro */}
+        <NavLink
+          to="/cadastro"
+          className={({ isActive }) =>
+            `${linkClass} ${isActive ? activeClass : inactiveClass}`
+          }
+        >
+          <Icons.AddUser />
+          <span>Nova Matrícula</span>
+        </NavLink>
+
         <NavLink
           to="/turmas"
           className={({ isActive }) =>
             `${linkClass} ${isActive ? activeClass : inactiveClass}`
           }
         >
-          <Icons.Calendar />{" "}
-          {/* Importe Calendar no Icons.tsx ou use um existente */}
+          <Icons.Calendar />
           <span>Turmas</span>
         </NavLink>
+
         <NavLink
           to="/historico"
           className={({ isActive }) =>
             `${linkClass} ${isActive ? activeClass : inactiveClass}`
           }
         >
-          <Icons.FileText />{" "}
-          {/* Se não tiver FileText, use Icons.Filter ou similar */}
+          <Icons.FileText />
           <span>Histórico</span>
         </NavLink>
       </nav>

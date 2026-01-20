@@ -160,4 +160,30 @@ export class AttendanceRepository {
       return [];
     }
   }
+  delete(classId: number) {
+    const db = this.dbManager.getInstance();
+
+    try {
+      db.exec("BEGIN TRANSACTION");
+
+      // 1. Remove os registros de presença (filhos)
+      const stmtAtt = db.prepare("DELETE FROM attendance WHERE class_id = $id");
+      stmtAtt.run({ $id: classId });
+      stmtAtt.free();
+
+      // 2. Remove a aula (pai)
+      const stmtClass = db.prepare("DELETE FROM classes WHERE id = $id");
+      stmtClass.run({ $id: classId });
+      stmtClass.free();
+
+      db.exec("COMMIT");
+
+      this.dbManager.save(); // Salva no arquivo físico
+      return { success: true };
+    } catch (error: any) {
+      db.exec("ROLLBACK");
+      console.error("Erro ao deletar aula:", error);
+      return { success: false, error: error.message };
+    }
+  }
 }

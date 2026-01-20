@@ -1,6 +1,5 @@
-import { ComponentProps } from "react";
+import { ComponentProps, useEffect, useState } from "react";
 
-// Ícone de Câmera para o botão de upload
 const CameraIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -48,6 +47,7 @@ interface FormInputProps<T> extends Omit<
   onChange: (name: keyof T, value: T[keyof T]) => void;
   options?: SelectOption[];
   className?: string;
+  currentPhotoUrl?: string; // <--- O SEGREDO ESTÁ AQUI (Nova Propriedade)
 }
 
 export default function FormInput<T>({
@@ -58,62 +58,80 @@ export default function FormInput<T>({
   onChange,
   options = [],
   className = "",
+  currentPhotoUrl, // <--- RECEBE A URL
   ...props
 }: FormInputProps<T>) {
+  const [preview, setPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (type === "file") {
+      if (value && (value as any) instanceof File) {
+        const objectUrl = URL.createObjectURL(value as any);
+        setPreview(objectUrl);
+        return () => URL.revokeObjectURL(objectUrl);
+      } else {
+        setPreview(null);
+      }
+    }
+  }, [value, type]);
+
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) {
-    // 1. Tratamento Especial para Arquivos (Lógica Mantida)
     if (type === "file") {
       const input = e.target as HTMLInputElement;
       const file = input.files?.[0] ?? null;
       onChange(name, file as T[keyof T]);
       return;
     }
-
-    // 2. Tratamento Especial para Números
     if (type === "number") {
       const val = e.target.value === "" ? 0 : Number(e.target.value);
       onChange(name, val as T[keyof T]);
       return;
     }
-
-    // 3. Padrão
     onChange(name, e.target.value as T[keyof T]);
   }
 
   const safeValue = type === "file" ? undefined : ((value as any) ?? "");
-
-  // ESTILO DOS INPUTS:
-  // rounded-3xl para ficar bem redondo como na imagem de referência
   const inputStyle =
     "border border-stone-200 rounded-3xl px-5 py-3 bg-[#F9F9F9] text-stone-700 focus:ring-2 focus:ring-[#8CAB91]/50 focus:border-[#8CAB91] outline-none transition-all w-full placeholder-stone-400 shadow-sm";
 
-  // --- RENDERIZAÇÃO ESPECIAL PARA FOTO (Estilo Circular) ---
+  // Lógica: Mostra o Preview (Novo) OU a Foto Atual (Banco)
+  const imageToShow = preview || currentPhotoUrl;
+
   if (type === "file") {
     return (
       <div
         className={`flex flex-col items-center justify-center py-4 ${className}`}
       >
-        {/* Label invisível para acessibilidade, o botão visual faz o papel */}
         <label className="group cursor-pointer flex flex-col items-center justify-center relative">
-          {/* Círculo da Foto */}
-          <div className="w-24 h-24 rounded-full bg-white border-2 border-dashed border-[#8CAB91] flex items-center justify-center text-[#8CAB91] shadow-md group-hover:bg-[#8CAB91] group-hover:text-white group-hover:border-transparent transition-all duration-300 transform group-hover:scale-105">
-            {/* Se tiver valor (arquivo selecionado), mostra um check ou preview simples */}
-            {value ? <span className="text-2xl">📸</span> : <CameraIcon />}
+          <div className="w-24 h-24 rounded-full bg-white border-2 border-dashed border-[#8CAB91] flex items-center justify-center text-[#8CAB91] shadow-md group-hover:bg-[#8CAB91] group-hover:text-white group-hover:border-transparent transition-all duration-300 transform group-hover:scale-105 overflow-hidden relative">
+            {imageToShow ? (
+              <img
+                src={imageToShow}
+                alt="Foto"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <CameraIcon />
+            )}
+
+            {imageToShow && (
+              <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-white text-xs font-bold">TROCAR</span>
+              </div>
+            )}
           </div>
 
-          {/* Texto "Add Photo" */}
           <span className="mt-3 text-xs font-bold text-[#8CAB91] uppercase tracking-widest group-hover:text-[#2C3A30] transition-colors">
-            {value ? "Alterar Foto" : label}
+            {value || currentPhotoUrl ? "Alterar Foto" : label}
           </span>
 
-          {/* Input original escondido (Mantendo a lógica) */}
           <input
             type="file"
             name={String(name)}
             onChange={handleChange}
-            className="hidden" // Escondemos o input feio padrão
+            className="hidden"
             accept="image/*"
             {...props}
           />
@@ -122,20 +140,17 @@ export default function FormInput<T>({
     );
   }
 
-  // --- RENDERIZAÇÃO PADRÃO (Inputs de Texto/Select) ---
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
-      {/* Label com recuo para alinhar com a curva do input */}
       <label className="text-xs font-bold text-stone-500 uppercase tracking-wider ml-4">
         {label}
       </label>
-
       {type === "select" ? (
         <select
           name={String(name)}
           value={safeValue}
           onChange={handleChange}
-          className={`${inputStyle} appearance-none`} // appearance-none remove a seta padrão feia
+          className={`${inputStyle} appearance-none`}
           {...(props as any)}
         >
           <option value="">Selecione...</option>

@@ -9,5 +9,8 @@ electron.contextBridge.exposeInMainWorld("api", {
   }),
   saveAttendance: (data) => electron.ipcRenderer.invoke("save-attendance", data),
   getAttendanceHistory: () => electron.ipcRenderer.invoke("get-attendance-history"),
-  getClassDetails: (id) => electron.ipcRenderer.invoke("get-class-details", id)
+  getClassDetails: (id) => electron.ipcRenderer.invoke("get-class-details", id),
+  updateCadastro: (data) => electron.ipcRenderer.invoke("update-aluno", data),
+  deleteCadastro: (id) => electron.ipcRenderer.invoke("delete-aluno", id),
+  deleteClass: (id) => electron.ipcRenderer.invoke("delete-class", id)
 });
