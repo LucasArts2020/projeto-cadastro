@@ -1,4 +1,4 @@
-import { app, protocol, net, ipcMain, BrowserWindow } from "electron";
+import { app, protocol, Menu, net, ipcMain, BrowserWindow } from "electron";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import fs from "node:fs";
@@ -411,6 +411,7 @@ protocol.registerSchemesAsPrivileged([
     }
   }
 ]);
+Menu.setApplicationMenu(null);
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];

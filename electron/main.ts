@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, protocol, net } from "electron";
+import { app, BrowserWindow, ipcMain, protocol, net, Menu } from "electron";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import fs from "node:fs";
@@ -18,6 +18,8 @@ protocol.registerSchemesAsPrivileged([
     },
   },
 ]);
+
+Menu.setApplicationMenu(null);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
