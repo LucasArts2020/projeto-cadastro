@@ -1,4 +1,3 @@
-// electron/repositories/AttendanceRepository.ts
 import { DatabaseManager } from "../database/DatabaseManager";
 
 interface AttendanceRecord {
@@ -8,7 +7,7 @@ interface AttendanceRecord {
 
 interface SaveAttendanceDTO {
   turma: string;
-  dataAula: string; // YYYY-MM-DD
+  dataAula: string;
   registros: AttendanceRecord[];
 }
 
@@ -34,12 +33,10 @@ export class AttendanceRepository {
         $data_aula: data.dataAula,
       });
 
-      // Pegar o ID da aula que acabou de ser criada
       const result = db.exec("SELECT last_insert_rowid() as id");
       const classId = result[0].values[0][0];
       stmtClass.free();
 
-      // 2. Salvar as Presenças
       const stmtAttendance = db.prepare(
         "INSERT INTO attendance (student_id, class_id, status) VALUES ($studentId, $classId, $status)",
       );
@@ -55,11 +52,11 @@ export class AttendanceRepository {
       stmtAttendance.free();
       db.exec("COMMIT");
 
-      this.dbManager.save(); // Salva no arquivo físico
+      this.dbManager.save();
 
       return { success: true };
     } catch (error: any) {
-      db.exec("ROLLBACK"); // Se der erro, desfaz tudo
+      db.exec("ROLLBACK");
       console.error("Erro ao salvar chamada:", error);
       return { success: false, error: error.message };
     }
@@ -79,11 +76,9 @@ export class AttendanceRepository {
         LEFT JOIN attendance a ON c.id = a.class_id
       `;
 
-      // 2. Lógica de Filtros (Inserção manual na string)
       const conditions: string[] = [];
 
       if (filters?.startDate) {
-        // Importante: Aspas simples em volta da data '${...}'
         conditions.push(`c.data_aula >= '${filters.startDate}'`);
       }
 
@@ -91,18 +86,15 @@ export class AttendanceRepository {
         conditions.push(`c.data_aula <= '${filters.endDate}'`);
       }
 
-      // Se houver condições, adiciona o WHERE
       if (conditions.length > 0) {
         query += " WHERE " + conditions.join(" AND ");
       }
 
-      // 3. Finaliza a Query com Agrupamento e Ordenação
       query += `
         GROUP BY c.id
         ORDER BY c.data_aula DESC, c.id DESC
       `;
 
-      // 4. Execução (Usando exec em vez de prepare/all)
       const result = db.exec(query);
 
       if (result.length === 0) return [];
@@ -110,7 +102,6 @@ export class AttendanceRepository {
       const columns = result[0].columns;
       const values = result[0].values;
 
-      // 5. Mapeamento dos dados
       return values.map((row) => {
         const obj: any = {};
         columns.forEach((col, i) => {
@@ -127,7 +118,6 @@ export class AttendanceRepository {
     const db = this.dbManager.getInstance();
 
     try {
-      // Versão limpa e compatível: Usa apenas db.exec
       const result = db.exec(`
         SELECT 
           s.id, s.nome, s.foto, a.status 
@@ -166,19 +156,17 @@ export class AttendanceRepository {
     try {
       db.exec("BEGIN TRANSACTION");
 
-      // 1. Remove os registros de presença (filhos)
       const stmtAtt = db.prepare("DELETE FROM attendance WHERE class_id = $id");
       stmtAtt.run({ $id: classId });
       stmtAtt.free();
 
-      // 2. Remove a aula (pai)
       const stmtClass = db.prepare("DELETE FROM classes WHERE id = $id");
       stmtClass.run({ $id: classId });
       stmtClass.free();
 
       db.exec("COMMIT");
 
-      this.dbManager.save(); // Salva no arquivo físico
+      this.dbManager.save();
       return { success: true };
     } catch (error: any) {
       db.exec("ROLLBACK");

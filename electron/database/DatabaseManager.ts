@@ -5,7 +5,6 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const initSqlJs = require("sql.js");
 
-// Tipagens do SQL.js
 export type SqlValue = number | string | Uint8Array | null;
 
 export interface QueryExecResult {
@@ -27,10 +26,9 @@ export interface Database {
 
 export class DatabaseManager {
   private db: Database | null = null;
-  private dbPath: string; // Caminho completo para SALVAR o arquivo .sqlite
-  private wasmPath: string; // Caminho completo para LER o arquivo .wasm
+  private dbPath: string;
+  private wasmPath: string;
 
-  // O construtor agora pede os caminhos exatos, sem "adivinhar"
   constructor(dbPath: string, wasmPath: string) {
     this.dbPath = dbPath;
     this.wasmPath = wasmPath;
@@ -42,32 +40,28 @@ export class DatabaseManager {
       console.log("Lendo WASM em:", this.wasmPath);
       console.log("Salvando DB em:", this.dbPath);
 
-      // 1. Verifica se o arquivo WASM existe (Essencial para produção)
       if (!fs.existsSync(this.wasmPath)) {
         throw new Error(
           `CRÍTICO: Arquivo sql-wasm.wasm não encontrado no caminho: ${this.wasmPath}`,
         );
       }
 
-      // 2. Carrega o SQL.js
       const wasmBuffer = fs.readFileSync(this.wasmPath);
       const SQL = await initSqlJs({ wasmBinary: wasmBuffer });
 
-      // 3. Garante que a pasta do banco de dados existe (Cria se não existir)
       const dbDir = path.dirname(this.dbPath);
       if (!fs.existsSync(dbDir)) {
         console.log(`Criando diretório para o banco: ${dbDir}`);
         fs.mkdirSync(dbDir, { recursive: true });
       }
 
-      // 4. Carrega ou Cria o Banco
       if (fs.existsSync(this.dbPath)) {
         const fileBuffer = fs.readFileSync(this.dbPath);
         this.db = new SQL.Database(fileBuffer) as Database;
         console.log("Banco de dados existente carregado com sucesso.");
       } else {
         this.db = new SQL.Database() as Database;
-        this.createTables(); // Cria as tabelas e salva o arquivo inicial
+        this.createTables();
       }
     } catch (err) {
       console.error("ERRO CRÍTICO AO INICIAR BANCO:", err);

@@ -4,7 +4,6 @@ import fs from "node:fs";
 import { app } from "electron";
 import crypto from "node:crypto";
 
-// Interface igual ao Front-End
 export interface Student {
   id?: number;
   nome: string;
@@ -55,7 +54,6 @@ export class StudentRepository {
           obj[col] = row[i];
         });
 
-        // CONVERSÃO: JSON String -> Array
         let diasParsed: string[] = [];
         try {
           if (obj.diasSemana) diasParsed = JSON.parse(obj.diasSemana);
@@ -65,8 +63,8 @@ export class StudentRepository {
 
         return {
           ...obj,
-          telefone2: obj.telefoneEmergencia, // Mapeamento Banco -> Front
-          fotoUrl: obj.foto, // Mapeamento Banco -> Front
+          telefone2: obj.telefoneEmergencia,
+          fotoUrl: obj.foto,
           diasSemana: diasParsed,
           horarioAula: obj.horarioAula,
         } as Student;
@@ -83,7 +81,6 @@ export class StudentRepository {
 
       const diaVencimentoSafe = parseInt(String(dados.diaVencimento || 0));
 
-      // CONVERSÃO: Array -> JSON String
       const diasSemanaString = JSON.stringify(dados.diasSemana || []);
 
       const stmt = db.prepare(`
@@ -106,9 +103,9 @@ export class StudentRepository {
         $cpf: dados.cpf,
         $dataNascimento: dados.dataNascimento,
         $telefone: dados.telefone,
-        $telefoneEmergencia: dados.telefone2 || "", // Mapeamento Front -> Banco
+        $telefoneEmergencia: dados.telefone2 || "",
         $endereco: dados.endereco,
-        $foto: dados.fotoUrl || null, // Mapeamento Front -> Banco
+        $foto: dados.fotoUrl || null,
         $turma: dados.turma,
         $valorMatricula: dados.valorMatricula,
         $planoMensal: dados.planoMensal,
@@ -122,7 +119,6 @@ export class StudentRepository {
       stmt.run(params);
       stmt.free();
 
-      // Salva no disco
       this.dbManager.save();
 
       return { success: true };
@@ -150,16 +146,13 @@ export class StudentRepository {
     return filePath;
   }
 
-  // --- FUNÇÃO UPDATE CORRIGIDA ---
   update(student: Student): ApiResponse {
     try {
       const db = this.dbManager.getInstance();
 
-      // Tratamentos de dados (iguais ao create)
       const diaVencimentoSafe = parseInt(String(student.diaVencimento || 0));
       const diasSemanaString = JSON.stringify(student.diasSemana || []);
 
-      // Agora usamos os nomes de coluna corretos (camelCase) e Prepared Statement
       const stmt = db.prepare(`
         UPDATE students 
         SET 
@@ -187,14 +180,14 @@ export class StudentRepository {
         $nome: student.nome,
         $rg: student.rg,
         $cpf: student.cpf,
-        // Correção: nome da coluna é dataNascimento, não data_nascimento
+
         $dataNascimento: student.dataNascimento,
         $telefone: student.telefone,
-        // Correção: Mapeia telefone2 -> telefoneEmergencia
+
         $telefoneEmergencia: student.telefone2 || "",
         $endereco: student.endereco,
         $turma: student.turma,
-        // Correção: nome da coluna diasSemana e converte para string
+
         $diasSemana: diasSemanaString,
         $horarioAula: student.horarioAula || "",
         $valorMatricula: student.valorMatricula,
@@ -202,7 +195,7 @@ export class StudentRepository {
         $valorMensalidade: student.valorMensalidade,
         $formaPagamento: student.formaPagamento,
         $diaVencimento: diaVencimentoSafe,
-        // Correção: Mapeia fotoUrl -> foto
+
         $foto: student.fotoUrl || null,
       };
 
