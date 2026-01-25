@@ -9,9 +9,33 @@ interface Props {
 export default function StepPersonalData({ data, onChange }: Props) {
   const getPhotoUrl = () => {
     if (!data.fotoUrl) return undefined;
-
     const cleanPath = data.fotoUrl.replace(/\\/g, "/");
     return `media://${cleanPath}`;
+  };
+
+  const maskCPF = (value: string) => {
+    return value
+      .replace(/\D/g, "")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})/, "$1-$2")
+      .replace(/(-\d{2})\d+?$/, "$1");
+  };
+
+  const maskPhone = (value: string) => {
+    let v = value.replace(/\D/g, "");
+
+    if (v.length > 11) v = v.substring(0, 11);
+
+    if (v.length > 10) {
+      return v.replace(/^(\d\d)(\d{5})(\d{4}).*/, "($1) $2-$3");
+    } else if (v.length > 5) {
+      return v.replace(/^(\d\d)(\d{4})(\d{0,4}).*/, "($1) $2-$3");
+    } else if (v.length > 2) {
+      return v.replace(/^(\d\d)(\d{0,5}).*/, "($1) $2");
+    } else {
+      return v.replace(/^(\d*)/, "($1");
+    }
   };
 
   return (
@@ -49,8 +73,9 @@ export default function StepPersonalData({ data, onChange }: Props) {
         label="CPF"
         name="cpf"
         value={data.cpf}
-        onChange={onChange}
+        onChange={(name, val) => onChange(name, maskCPF(String(val)))}
         placeholder="000.000.000-00"
+        maxLength={14}
       />
       <FormInput<Cadastro>
         label="RG"
@@ -69,15 +94,17 @@ export default function StepPersonalData({ data, onChange }: Props) {
         label="Telefone / WhatsApp"
         name="telefone"
         value={data.telefone}
-        onChange={onChange}
+        onChange={(name, val) => onChange(name, maskPhone(String(val)))}
         placeholder="(00) 00000-0000"
+        maxLength={15}
       />
       <FormInput<Cadastro>
         label="Telefone Recado"
         name="telefone2"
         value={data.telefone2}
-        onChange={onChange}
+        onChange={(name, val) => onChange(name, maskPhone(String(val)))}
         placeholder="(00) 0000-0000"
+        maxLength={15}
       />
       <FormInput<Cadastro>
         label="Endereço Completo"

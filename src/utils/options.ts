@@ -16,3 +16,16 @@ export const OPCOES_HORARIOS = [
   "20:00",
   "21:00",
 ];
+export const OPCOES_PLANOS = [
+  { value: "MENSAL", label: "Mensal" },
+  { value: "BIMESTRAL", label: "Bimestral" },
+  { value: "TRIMESTRAL", label: "Trimestral" },
+  { value: "SEMESTRAL", label: "Semestral" },
+  { value: "ANUAL", label: "Anual" },
+];
+export const OPCOES_PAGAMENTO = [
+  { value: "PIX", label: "PIX" },
+  { value: "BOLETO", label: "Boleto Bancário" },
+  { value: "CARTAO", label: "Cartão de Crédito" },
+  { value: "DINHEIRO", label: "Dinheiro" },
+];

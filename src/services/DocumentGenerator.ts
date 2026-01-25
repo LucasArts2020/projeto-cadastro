@@ -9,6 +9,7 @@ import {
 } from "docx";
 import { saveAs } from "file-saver";
 import { Cadastro } from "../types/typeCadastro";
+import { OPCOES_PAGAMENTO } from "../utils/options";
 
 const calcularIdade = (dataNasc: string) => {
   if (!dataNasc) return "";
@@ -20,6 +21,12 @@ const calcularIdade = (dataNasc: string) => {
     idade--;
   }
   return idade.toString();
+};
+
+const getFormaPagamentoLabel = (valor: string) => {
+  if (!valor) return "_____________";
+  const opcao = OPCOES_PAGAMENTO.find((op) => op.value === valor);
+  return opcao ? opcao.label : valor;
 };
 
 export const gerarContratoMatricula = async (
@@ -82,7 +89,7 @@ export const gerarContratoMatricula = async (
             children: [
               new TextRun({ text: "Nome: " }),
               new TextRun({
-                text: `${aluno.nome}                                      `,
+                text: `${aluno.nome}                                         `,
                 underline: { type: UnderlineType.SINGLE, color: "000000" },
               }),
               new TextRun({ text: " RG: " }),
@@ -195,7 +202,7 @@ export const gerarContratoMatricula = async (
               }),
               new TextRun(" mensais, com pagamento por meio de "),
               new TextRun({
-                text: `${aluno.formaPagamento || "_____________"}`,
+                text: `${getFormaPagamentoLabel(aluno.formaPagamento)}`,
                 underline: { type: UnderlineType.SINGLE, color: "000000" },
               }),
               new TextRun(" com vencimento para todo dia "),
@@ -213,7 +220,7 @@ export const gerarContratoMatricula = async (
               new TextRun({
                 text: "Autoriza o uso de imagem (fotos e vídeos)? ",
               }),
-              new TextRun("(.  ) Sim (.  ) Não"),
+              new TextRun("(  ) Sim (  ) Não"),
             ],
             spacing: { after: 400 },
           }),
