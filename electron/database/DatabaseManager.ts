@@ -27,37 +27,50 @@ export interface Database {
 
 export class DatabaseManager {
   private db: Database | null = null;
-  private dbPath: string;
-  private appRoot: string;
+  private dbPath: string; // Caminho completo para SALVAR o arquivo .sqlite
+  private wasmPath: string; // Caminho completo para LER o arquivo .wasm
 
-  constructor(appRoot: string) {
-    this.appRoot = appRoot;
-    this.dbPath = path.join(appRoot, "dados.sqlite");
+  // O construtor agora pede os caminhos exatos, sem "adivinhar"
+  constructor(dbPath: string, wasmPath: string) {
+    this.dbPath = dbPath;
+    this.wasmPath = wasmPath;
   }
 
   async init(): Promise<void> {
     try {
-      const wasmPath = path.join(
-        this.appRoot,
-        "node_modules",
-        "sql.js",
-        "dist",
-        "sql-wasm.wasm",
-      );
-      const wasmBuffer = fs.readFileSync(wasmPath);
+      console.log("--- INICIANDO BANCO DE DADOS ---");
+      console.log("Lendo WASM em:", this.wasmPath);
+      console.log("Salvando DB em:", this.dbPath);
 
+      // 1. Verifica se o arquivo WASM existe (Essencial para produção)
+      if (!fs.existsSync(this.wasmPath)) {
+        throw new Error(
+          `CRÍTICO: Arquivo sql-wasm.wasm não encontrado no caminho: ${this.wasmPath}`,
+        );
+      }
+
+      // 2. Carrega o SQL.js
+      const wasmBuffer = fs.readFileSync(this.wasmPath);
       const SQL = await initSqlJs({ wasmBinary: wasmBuffer });
 
+      // 3. Garante que a pasta do banco de dados existe (Cria se não existir)
+      const dbDir = path.dirname(this.dbPath);
+      if (!fs.existsSync(dbDir)) {
+        console.log(`Criando diretório para o banco: ${dbDir}`);
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+
+      // 4. Carrega ou Cria o Banco
       if (fs.existsSync(this.dbPath)) {
         const fileBuffer = fs.readFileSync(this.dbPath);
         this.db = new SQL.Database(fileBuffer) as Database;
-        console.log("Banco de dados carregado com sucesso.");
+        console.log("Banco de dados existente carregado com sucesso.");
       } else {
         this.db = new SQL.Database() as Database;
-        this.createTables();
+        this.createTables(); // Cria as tabelas e salva o arquivo inicial
       }
     } catch (err) {
-      console.error("ERRO CRÍTICO NO BANCO:", err);
+      console.error("ERRO CRÍTICO AO INICIAR BANCO:", err);
       throw err;
     }
   }
@@ -105,7 +118,7 @@ export class DatabaseManager {
     `);
 
     this.save();
-    console.log("Novo banco de dados criado.");
+    console.log("Tabelas criadas e banco salvo.");
   }
 
   public getInstance(): Database {
@@ -115,8 +128,12 @@ export class DatabaseManager {
 
   public save(): void {
     if (!this.db) return;
-    const data = this.db.export();
-    const buffer = Buffer.from(data);
-    fs.writeFileSync(this.dbPath, buffer);
+    try {
+      const data = this.db.export();
+      const buffer = Buffer.from(data);
+      fs.writeFileSync(this.dbPath, buffer);
+    } catch (error) {
+      console.error("Erro ao salvar o arquivo do banco:", error);
+    }
   }
 }

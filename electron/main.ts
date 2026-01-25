@@ -31,7 +31,16 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
   ? path.join(process.env.APP_ROOT, "public")
   : RENDERER_DIST;
 
-const dbManager = new DatabaseManager(process.env.APP_ROOT);
+// --- AJUSTE AQUI ---
+// 1. Caminho onde o banco será salvo (com permissão de escrita)
+const dbSavePath = path.join(app.getPath("userData"), "dados.sqlite");
+
+// 2. Caminho onde o arquivo WASM está (na pasta public)
+const wasmSourcePath = path.join(process.env.VITE_PUBLIC, "sql-wasm.wasm");
+
+// 3. Passa os dois caminhos para o gerenciador
+const dbManager = new DatabaseManager(dbSavePath, wasmSourcePath);
+// -------------------
 
 const studentRepo = new StudentRepository(dbManager);
 
@@ -103,26 +112,26 @@ ipcMain.handle("get-alunos", () => {
   return studentRepo.getAll();
 });
 
-ipcMain.handle("add-aluno", (event, dados) => {
+ipcMain.handle("add-aluno", (_, dados) => {
   return studentRepo.create(dados);
 });
 
-ipcMain.handle("save-attendance", (event, data) => {
+ipcMain.handle("save-attendance", (_, data) => {
   return attendanceRepo.save(data);
 });
 
-ipcMain.handle("get-class-details", (event, classId) => {
+ipcMain.handle("get-class-details", (_, classId) => {
   return attendanceRepo.getClassDetails(classId);
 });
 // Procure o handler existente e atualize:
-ipcMain.handle("get-attendance-history", (event, filters) => {
+ipcMain.handle("get-attendance-history", (_, filters) => {
   return attendanceRepo.getHistory(filters);
 });
 ipcMain.handle("save-image", (_, file) => {
   return studentRepo.saveImg(file);
 });
 
-ipcMain.handle("update-aluno", (event, dados) => {
+ipcMain.handle("update-aluno", (_, dados) => {
   return studentRepo.update(dados);
 });
 
