@@ -136,3 +136,6 @@ ipcMain.handle("delete-aluno", async (_, id) => {
 ipcMain.handle("delete-class", (_, id) => {
   return attendanceRepo.delete(id);
 });
+ipcMain.handle("confirmar-pagamento", (_, id: number) => {
+  return studentRepo.confirmarPagamento(id);
+});

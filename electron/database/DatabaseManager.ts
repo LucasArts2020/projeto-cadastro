@@ -45,7 +45,7 @@ export class DatabaseManager {
           `CRÍTICO: Arquivo sql-wasm.wasm não encontrado no caminho: ${this.wasmPath}`,
         );
       }
-
+      console.log("Salvando DB em:", this.dbPath);
       const wasmBuffer = fs.readFileSync(this.wasmPath);
       const SQL = await initSqlJs({ wasmBinary: wasmBuffer });
 
@@ -73,43 +73,53 @@ export class DatabaseManager {
     if (!this.db) return;
 
     this.db.run(`
-      CREATE TABLE IF NOT EXISTS students (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nome TEXT NOT NULL,
-        rg TEXT,
-        cpf TEXT UNIQUE NOT NULL,
-        dataNascimento TEXT NOT NULL,
-        telefone TEXT NOT NULL,
-        telefoneEmergencia TEXT NOT NULL,
-        endereco TEXT NOT NULL,
-        foto TEXT,
-        turma TEXT NOT NULL,
-        valorMatricula REAL NOT NULL,
-        planoMensal TEXT NOT NULL,
-        valorMensalidade REAL NOT NULL,
-        formaPagamento TEXT NOT NULL,
-        diaVencimento INTEGER NOT NULL,
-        diasSemana TEXT,
-        horarioAula TEXT,
-        createdAt TEXT DEFAULT CURRENT_TIMESTAMP
-      );
+    CREATE TABLE IF NOT EXISTS students (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT NOT NULL,
+      rg TEXT,
+      cpf TEXT UNIQUE NOT NULL,
+      dataNascimento TEXT NOT NULL,
+      telefone TEXT NOT NULL,
+      telefoneEmergencia TEXT NOT NULL,
+      endereco TEXT NOT NULL,
+      foto TEXT,
+      turma TEXT NOT NULL,
+      valorMatricula REAL NOT NULL,
+      planoMensal TEXT NOT NULL,
+      valorMensalidade REAL NOT NULL,
+      formaPagamento TEXT NOT NULL,
+      diaVencimento INTEGER NOT NULL,
+      diasSemana TEXT,
+      horarioAula TEXT,
+      createdAt TEXT DEFAULT CURRENT_TIMESTAMP
+    );
 
-      CREATE TABLE IF NOT EXISTS classes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        turma TEXT NOT NULL,
-        data_aula TEXT NOT NULL,
-        descricao TEXT
-      );
+    CREATE TABLE IF NOT EXISTS payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL,
+      mesReferencia TEXT NOT NULL,
+      valor REAL NOT NULL,
+      dataPagamento TEXT NOT NULL,
+      FOREIGN KEY (student_id) REFERENCES students(id),
+      UNIQUE(student_id, mesReferencia)
+    );
 
-      CREATE TABLE IF NOT EXISTS attendance (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        student_id INTEGER NOT NULL,
-        class_id INTEGER NOT NULL,
-        status TEXT CHECK(status IN ('presente', 'falta', 'justificado')) NOT NULL,
-        FOREIGN KEY (student_id) REFERENCES students(id),
-        FOREIGN KEY (class_id) REFERENCES classes(id)
-      );
-    `);
+    CREATE TABLE IF NOT EXISTS classes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      turma TEXT NOT NULL,
+      data_aula TEXT NOT NULL,
+      descricao TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS attendance (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL,
+      class_id INTEGER NOT NULL,
+      status TEXT CHECK(status IN ('presente', 'falta', 'justificado')) NOT NULL,
+      FOREIGN KEY (student_id) REFERENCES students(id),
+      FOREIGN KEY (class_id) REFERENCES classes(id)
+    );
+  `);
 
     this.save();
     console.log("Tabelas criadas e banco salvo.");

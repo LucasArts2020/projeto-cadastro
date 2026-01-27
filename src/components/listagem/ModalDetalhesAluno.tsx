@@ -5,6 +5,7 @@ interface Props {
   onClose: () => void;
   onEdit: () => void;
   onGenerateDoc: () => void;
+  onConfirmPayment: (student: Cadastro) => void;
 }
 
 export default function ModalDetalhesAluno({
@@ -12,6 +13,7 @@ export default function ModalDetalhesAluno({
   onClose,
   onEdit,
   onGenerateDoc,
+  onConfirmPayment,
 }: Props) {
   const formatMoney = (val?: number) => `R$ ${(Number(val) || 0).toFixed(2)}`;
   const getPhoto = () =>
@@ -172,7 +174,17 @@ export default function ModalDetalhesAluno({
             >
               Fechar
             </button>
-
+            {!student.pago && (
+              <button
+                onClick={() => {
+                  onConfirmPayment(student);
+                  onClose();
+                }}
+                className="px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg shadow-sm hover:shadow-md transition flex items-center gap-2 font-medium"
+              >
+                💰 Marcar como Pago
+              </button>
+            )}
             <button
               onClick={onEdit}
               className="px-6 py-2 bg-[#8CAB91] text-white hover:bg-[#7A9B7F] rounded-lg shadow-sm hover:shadow-md transition flex items-center gap-2 font-medium"

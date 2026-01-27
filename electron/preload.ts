@@ -16,4 +16,6 @@ contextBridge.exposeInMainWorld("api", {
   updateCadastro: (data: any) => ipcRenderer.invoke("update-aluno", data),
   deleteCadastro: (id: number) => ipcRenderer.invoke("delete-aluno", id),
   deleteClass: (id: number) => ipcRenderer.invoke("delete-class", id),
+  confirmarPagamento: (id: number) =>
+    ipcRenderer.invoke("confirmar-pagamento", id),
 });

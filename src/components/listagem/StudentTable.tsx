@@ -5,6 +5,7 @@ interface Props {
   loading: boolean;
   onSelect: (student: Cadastro) => void;
   onDelete: (student: Cadastro) => void;
+  onConfirmPayment: (student: Cadastro) => void;
 }
 
 export default function StudentTable({
@@ -12,6 +13,7 @@ export default function StudentTable({
   loading,
   onSelect,
   onDelete,
+  onConfirmPayment,
 }: Props) {
   const getInitials = (name: string) => {
     const parts = name.trim().split(" ");
@@ -116,11 +118,17 @@ export default function StudentTable({
                   </td>
 
                   <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(student.diaVencimento)}`}
-                    >
-                      Vence dia {student.diaVencimento}
-                    </span>
+                    {student.pago ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border bg-green-50 text-green-700 border-green-200">
+                        Pago
+                      </span>
+                    ) : (
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(student.diaVencimento)}`}
+                      >
+                        Pendente • vence dia {student.diaVencimento}
+                      </span>
+                    )}
                   </td>
 
                   <td className="px-6 py-4 text-right">
@@ -129,7 +137,7 @@ export default function StudentTable({
                     </span>
                   </td>
 
-                  <td className="px-6 py-4 text-center">
+                  <td className="px-6 py-4 text-center flex justify-center gap-2">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
