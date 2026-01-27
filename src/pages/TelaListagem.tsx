@@ -42,6 +42,20 @@ export default function TelaListagem() {
   useEffect(() => {
     loadStudents();
   }, []);
+  const handleConfirmarPagamento = async (student: Cadastro) => {
+    if (!student.id) return;
+
+    setLoading(true);
+    try {
+      await CadastroService.confirmarPagamento(student.id);
+      await loadStudents();
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao confirmar pagamento");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadStudents = async () => {
     setLoading(true);
@@ -133,6 +147,7 @@ export default function TelaListagem() {
         loading={loading}
         onSelect={(student) => setViewStudent(student)}
         onDelete={handleDelete}
+        onConfirmPayment={handleConfirmarPagamento}
       />
 
       <ModalFiltros
@@ -153,6 +168,10 @@ export default function TelaListagem() {
           onGenerateDoc={() => {
             setDocStudent(viewStudent);
             setViewStudent(null);
+          }}
+          onConfirmPayment={(student) => {
+            handleConfirmarPagamento(student);
+            setViewStudent(null); // fecha o modal após pagar
           }}
         />
       )}

@@ -27,6 +27,7 @@ class DatabaseManager {
           `CRÍTICO: Arquivo sql-wasm.wasm não encontrado no caminho: ${this.wasmPath}`
         );
       }
+      console.log("Salvando DB em:", this.dbPath);
       const wasmBuffer = fs.readFileSync(this.wasmPath);
       const SQL = await initSqlJs({ wasmBinary: wasmBuffer });
       const dbDir = path.dirname(this.dbPath);
@@ -50,43 +51,53 @@ class DatabaseManager {
   createTables() {
     if (!this.db) return;
     this.db.run(`
-      CREATE TABLE IF NOT EXISTS students (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nome TEXT NOT NULL,
-        rg TEXT,
-        cpf TEXT UNIQUE NOT NULL,
-        dataNascimento TEXT NOT NULL,
-        telefone TEXT NOT NULL,
-        telefoneEmergencia TEXT NOT NULL,
-        endereco TEXT NOT NULL,
-        foto TEXT,
-        turma TEXT NOT NULL,
-        valorMatricula REAL NOT NULL,
-        planoMensal TEXT NOT NULL,
-        valorMensalidade REAL NOT NULL,
-        formaPagamento TEXT NOT NULL,
-        diaVencimento INTEGER NOT NULL,
-        diasSemana TEXT,
-        horarioAula TEXT,
-        createdAt TEXT DEFAULT CURRENT_TIMESTAMP
-      );
+    CREATE TABLE IF NOT EXISTS students (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT NOT NULL,
+      rg TEXT,
+      cpf TEXT UNIQUE NOT NULL,
+      dataNascimento TEXT NOT NULL,
+      telefone TEXT NOT NULL,
+      telefoneEmergencia TEXT NOT NULL,
+      endereco TEXT NOT NULL,
+      foto TEXT,
+      turma TEXT NOT NULL,
+      valorMatricula REAL NOT NULL,
+      planoMensal TEXT NOT NULL,
+      valorMensalidade REAL NOT NULL,
+      formaPagamento TEXT NOT NULL,
+      diaVencimento INTEGER NOT NULL,
+      diasSemana TEXT,
+      horarioAula TEXT,
+      createdAt TEXT DEFAULT CURRENT_TIMESTAMP
+    );
 
-      CREATE TABLE IF NOT EXISTS classes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        turma TEXT NOT NULL,
-        data_aula TEXT NOT NULL,
-        descricao TEXT
-      );
+    CREATE TABLE IF NOT EXISTS payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL,
+      mesReferencia TEXT NOT NULL,
+      valor REAL NOT NULL,
+      dataPagamento TEXT NOT NULL,
+      FOREIGN KEY (student_id) REFERENCES students(id),
+      UNIQUE(student_id, mesReferencia)
+    );
 
-      CREATE TABLE IF NOT EXISTS attendance (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        student_id INTEGER NOT NULL,
-        class_id INTEGER NOT NULL,
-        status TEXT CHECK(status IN ('presente', 'falta', 'justificado')) NOT NULL,
-        FOREIGN KEY (student_id) REFERENCES students(id),
-        FOREIGN KEY (class_id) REFERENCES classes(id)
-      );
-    `);
+    CREATE TABLE IF NOT EXISTS classes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      turma TEXT NOT NULL,
+      data_aula TEXT NOT NULL,
+      descricao TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS attendance (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL,
+      class_id INTEGER NOT NULL,
+      status TEXT CHECK(status IN ('presente', 'falta', 'justificado')) NOT NULL,
+      FOREIGN KEY (student_id) REFERENCES students(id),
+      FOREIGN KEY (class_id) REFERENCES classes(id)
+    );
+  `);
     this.save();
     console.log("Tabelas criadas e banco salvo.");
   }
@@ -107,59 +118,72 @@ class DatabaseManager {
 }
 class StudentRepository {
   constructor(dbManager2) {
-    __publicField(this, "dbManager");
     this.dbManager = dbManager2;
   }
+  // ===============================
+  // LISTAR ALUNOS + STATUS DE PAGAMENTO (MÊS ATUAL)
+  // ===============================
   getAll() {
     try {
       const db = this.dbManager.getInstance();
-      const result = db.exec("SELECT * FROM students ORDER BY id DESC");
-      if (result.length === 0) return [];
-      const columns = result[0].columns;
-      const values = result[0].values;
+      const mesAtual = (/* @__PURE__ */ new Date()).toISOString().slice(0, 7);
+      const result = db.exec(`
+        SELECT 
+          s.*,
+          CASE 
+            WHEN p.id IS NOT NULL THEN 1
+            ELSE 0
+          END AS pago,
+          p.dataPagamento
+        FROM students s
+        LEFT JOIN payments p
+          ON p.student_id = s.id
+         AND p.mesReferencia = '${mesAtual}'
+        ORDER BY s.id DESC
+      `);
+      if (!result.length) return [];
+      const { columns, values } = result[0];
       return values.map((row) => {
         const obj = {};
-        columns.forEach((col, i) => {
-          obj[col] = row[i];
-        });
+        columns.forEach((col, i) => obj[col] = row[i]);
         let diasParsed = [];
         try {
           if (obj.diasSemana) diasParsed = JSON.parse(obj.diasSemana);
-        } catch (e) {
+        } catch {
           diasParsed = [];
         }
         return {
           ...obj,
           telefone2: obj.telefoneEmergencia,
           fotoUrl: obj.foto,
-          diasSemana: diasParsed,
-          horarioAula: obj.horarioAula
+          diasSemana: diasParsed
         };
       });
     } catch (error) {
-      console.error("Erro no repository getAll:", error);
+      console.error("Erro no getAll:", error);
       return [];
     }
   }
+  // ===============================
+  // CRIAR ALUNO
+  // ===============================
   create(dados) {
     try {
       const db = this.dbManager.getInstance();
-      const diaVencimentoSafe = parseInt(String(dados.diaVencimento || 0));
-      const diasSemanaString = JSON.stringify(dados.diasSemana || []);
       const stmt = db.prepare(`
         INSERT INTO students (
-          nome, rg, cpf, dataNascimento, telefone, telefoneEmergencia, 
-          endereco, foto, turma, valorMatricula, planoMensal, 
+          nome, rg, cpf, dataNascimento, telefone, telefoneEmergencia,
+          endereco, foto, turma, valorMatricula, planoMensal,
           valorMensalidade, formaPagamento, diaVencimento,
           diasSemana, horarioAula
         ) VALUES (
-          $nome, $rg, $cpf, $dataNascimento, $telefone, $telefoneEmergencia, 
-          $endereco, $foto, $turma, $valorMatricula, $planoMensal, 
+          $nome, $rg, $cpf, $dataNascimento, $telefone, $telefoneEmergencia,
+          $endereco, $foto, $turma, $valorMatricula, $planoMensal,
           $valorMensalidade, $formaPagamento, $diaVencimento,
           $diasSemana, $horarioAula
         )
       `);
-      const params = {
+      stmt.run({
         $nome: dados.nome,
         $rg: dados.rg,
         $cpf: dados.cpf,
@@ -173,40 +197,55 @@ class StudentRepository {
         $planoMensal: dados.planoMensal,
         $valorMensalidade: dados.valorMensalidade,
         $formaPagamento: dados.formaPagamento,
-        $diaVencimento: diaVencimentoSafe,
-        $diasSemana: diasSemanaString,
+        $diaVencimento: Number(dados.diaVencimento),
+        $diasSemana: JSON.stringify(dados.diasSemana || []),
         $horarioAula: dados.horarioAula || ""
-      };
-      stmt.run(params);
+      });
       stmt.free();
       this.dbManager.save();
       return { success: true };
     } catch (error) {
-      let msg = "Erro desconhecido";
-      if (error instanceof Error) msg = error.message;
-      console.error("Erro no repository create:", msg);
-      return { success: false, error: msg };
+      console.error("Erro ao criar aluno:", error);
+      return { success: false, error: error.message };
     }
   }
-  saveImg(file) {
-    const imagesDir = path.join(app.getPath("userData"), "images");
-    if (!fs.existsSync(imagesDir)) {
-      fs.mkdirSync(imagesDir, { recursive: true });
+  // ===============================
+  // CONFIRMAR PAGAMENTO (MÊS ATUAL)
+  // ===============================
+  confirmarPagamento(studentId) {
+    try {
+      const db = this.dbManager.getInstance();
+      const mesReferencia = (/* @__PURE__ */ new Date()).toISOString().slice(0, 7);
+      const dataPagamento = (/* @__PURE__ */ new Date()).toISOString();
+      db.run(
+        `
+        INSERT OR REPLACE INTO payments
+          (student_id, mesReferencia, valor, dataPagamento)
+        SELECT
+          id,
+          ?,
+          valorMensalidade,
+          ?
+        FROM students
+        WHERE id = ?
+      `,
+        [mesReferencia, dataPagamento, studentId]
+      );
+      this.dbManager.save();
+      return { success: true };
+    } catch (error) {
+      console.error("Erro ao confirmar pagamento:", error);
+      return { success: false, error: error.message };
     }
-    const ext = path.extname(file.name);
-    const fileName = crypto.randomUUID() + ext;
-    const filePath = path.join(imagesDir, fileName);
-    fs.writeFileSync(filePath, Buffer.from(file.buffer));
-    return filePath;
   }
+  // ===============================
+  // ATUALIZAR ALUNO
+  // ===============================
   update(student) {
     try {
       const db = this.dbManager.getInstance();
-      const diaVencimentoSafe = parseInt(String(student.diaVencimento || 0));
-      const diasSemanaString = JSON.stringify(student.diasSemana || []);
       const stmt = db.prepare(`
-        UPDATE students 
-        SET 
+        UPDATE students SET
           nome = $nome,
           rg = $rg,
           cpf = $cpf,
@@ -225,7 +264,7 @@ class StudentRepository {
           foto = $foto
         WHERE id = $id
       `);
-      const params = {
+      stmt.run({
         $id: student.id,
         $nome: student.nome,
         $rg: student.rg,
@@ -235,40 +274,51 @@ class StudentRepository {
         $telefoneEmergencia: student.telefone2 || "",
         $endereco: student.endereco,
         $turma: student.turma,
-        $diasSemana: diasSemanaString,
+        $diasSemana: JSON.stringify(student.diasSemana || []),
         $horarioAula: student.horarioAula || "",
         $valorMatricula: student.valorMatricula,
         $planoMensal: student.planoMensal,
         $valorMensalidade: student.valorMensalidade,
         $formaPagamento: student.formaPagamento,
-        $diaVencimento: diaVencimentoSafe,
+        $diaVencimento: Number(student.diaVencimento),
         $foto: student.fotoUrl || null
-      };
-      stmt.run(params);
+      });
       stmt.free();
       this.dbManager.save();
       return { success: true };
     } catch (error) {
-      let msg = "Erro desconhecido ao atualizar";
-      if (error instanceof Error) msg = error.message;
-      console.error("Erro no repository update:", msg);
-      return { success: false, error: msg };
+      console.error("Erro ao atualizar:", error);
+      return { success: false, error: error.message };
     }
   }
+  // ===============================
+  // DELETAR ALUNO + PAGAMENTOS
+  // ===============================
   delete(id) {
     try {
       const db = this.dbManager.getInstance();
-      const stmt = db.prepare("DELETE FROM students WHERE id = $id");
-      stmt.run({ $id: id });
-      stmt.free();
+      db.run(`DELETE FROM payments WHERE student_id = ?`, [id]);
+      db.run(`DELETE FROM students WHERE id = ?`, [id]);
       this.dbManager.save();
       return { success: true };
     } catch (error) {
-      let msg = "Erro ao deletar";
-      if (error instanceof Error) msg = error.message;
-      console.error("Erro no repository delete:", msg);
-      return { success: false, error: msg };
+      console.error("Erro ao deletar:", error);
+      return { success: false, error: error.message };
     }
+  }
+  // ===============================
+  // SALVAR IMAGEM
+  // ===============================
+  saveImg(file) {
+    const imagesDir = path.join(app.getPath("userData"), "images");
+    if (!fs.existsSync(imagesDir)) {
+      fs.mkdirSync(imagesDir, { recursive: true });
+    }
+    const ext = path.extname(file.name);
+    const fileName = crypto.randomUUID() + ext;
+    const filePath = path.join(imagesDir, fileName);
+    fs.writeFileSync(filePath, Buffer.from(file.buffer));
+    return filePath;
   }
 }
 class AttendanceRepository {
@@ -502,6 +552,9 @@ ipcMain.handle("delete-aluno", async (_, id) => {
 });
 ipcMain.handle("delete-class", (_, id) => {
   return attendanceRepo.delete(id);
+});
+ipcMain.handle("confirmar-pagamento", (_, id) => {
+  return studentRepo.confirmarPagamento(id);
 });
 export {
   MAIN_DIST,

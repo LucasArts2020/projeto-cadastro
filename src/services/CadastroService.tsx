@@ -46,4 +46,8 @@ export const CadastroService = {
     // @ts-ignore
     return await window.api.deleteCadastro(id);
   },
+  confirmarPagamento: async (id: number) => {
+    // @ts-ignore
+    return await window.api.confirmarPagamento(id);
+  },
 };

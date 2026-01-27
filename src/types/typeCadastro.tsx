@@ -17,6 +17,8 @@ export interface Cadastro {
   valorMensalidade: number;
   formaPagamento: string;
   diaVencimento: number | "";
+  pago?: boolean;
+  dataPagamento?: string;
 }
 export interface Aula {
   id?: number;

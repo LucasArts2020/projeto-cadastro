@@ -23,6 +23,10 @@ export interface Student {
   diasSemana?: string[];
   horarioAula?: string;
   createdAt?: string;
+
+  // ⚠️ calculado via JOIN (não existe no banco)
+  pago?: number; // 0 ou 1
+  dataPagamento?: string | null;
 }
 
 export interface ApiResponse<T = void> {
@@ -32,32 +36,43 @@ export interface ApiResponse<T = void> {
 }
 
 export class StudentRepository {
-  private dbManager: DatabaseManager;
+  constructor(private dbManager: DatabaseManager) {}
 
-  constructor(dbManager: DatabaseManager) {
-    this.dbManager = dbManager;
-  }
-
+  // ===============================
+  // LISTAR ALUNOS + STATUS DE PAGAMENTO (MÊS ATUAL)
+  // ===============================
   getAll(): Student[] {
     try {
       const db = this.dbManager.getInstance();
-      const result = db.exec("SELECT * FROM students ORDER BY id DESC");
+      const mesAtual = new Date().toISOString().slice(0, 7); // YYYY-MM
 
-      if (result.length === 0) return [];
+      const result = db.exec(`
+        SELECT 
+          s.*,
+          CASE 
+            WHEN p.id IS NOT NULL THEN 1
+            ELSE 0
+          END AS pago,
+          p.dataPagamento
+        FROM students s
+        LEFT JOIN payments p
+          ON p.student_id = s.id
+         AND p.mesReferencia = '${mesAtual}'
+        ORDER BY s.id DESC
+      `);
 
-      const columns = result[0].columns;
-      const values = result[0].values;
+      if (!result.length) return [];
+
+      const { columns, values } = result[0];
 
       return values.map((row) => {
         const obj: any = {};
-        columns.forEach((col, i) => {
-          obj[col] = row[i];
-        });
+        columns.forEach((col, i) => (obj[col] = row[i]));
 
         let diasParsed: string[] = [];
         try {
           if (obj.diasSemana) diasParsed = JSON.parse(obj.diasSemana);
-        } catch (e) {
+        } catch {
           diasParsed = [];
         }
 
@@ -66,38 +81,36 @@ export class StudentRepository {
           telefone2: obj.telefoneEmergencia,
           fotoUrl: obj.foto,
           diasSemana: diasParsed,
-          horarioAula: obj.horarioAula,
         } as Student;
       });
     } catch (error) {
-      console.error("Erro no repository getAll:", error);
+      console.error("Erro no getAll:", error);
       return [];
     }
   }
 
+  // ===============================
+  // CRIAR ALUNO
+  // ===============================
   create(dados: Student): ApiResponse {
     try {
       const db = this.dbManager.getInstance();
 
-      const diaVencimentoSafe = parseInt(String(dados.diaVencimento || 0));
-
-      const diasSemanaString = JSON.stringify(dados.diasSemana || []);
-
       const stmt = db.prepare(`
         INSERT INTO students (
-          nome, rg, cpf, dataNascimento, telefone, telefoneEmergencia, 
-          endereco, foto, turma, valorMatricula, planoMensal, 
+          nome, rg, cpf, dataNascimento, telefone, telefoneEmergencia,
+          endereco, foto, turma, valorMatricula, planoMensal,
           valorMensalidade, formaPagamento, diaVencimento,
           diasSemana, horarioAula
         ) VALUES (
-          $nome, $rg, $cpf, $dataNascimento, $telefone, $telefoneEmergencia, 
-          $endereco, $foto, $turma, $valorMatricula, $planoMensal, 
+          $nome, $rg, $cpf, $dataNascimento, $telefone, $telefoneEmergencia,
+          $endereco, $foto, $turma, $valorMatricula, $planoMensal,
           $valorMensalidade, $formaPagamento, $diaVencimento,
           $diasSemana, $horarioAula
         )
       `);
 
-      const params: Record<string, SqlValue> = {
+      stmt.run({
         $nome: dados.nome,
         $rg: dados.rg,
         $cpf: dados.cpf,
@@ -111,51 +124,62 @@ export class StudentRepository {
         $planoMensal: dados.planoMensal,
         $valorMensalidade: dados.valorMensalidade,
         $formaPagamento: dados.formaPagamento,
-        $diaVencimento: diaVencimentoSafe,
-        $diasSemana: diasSemanaString,
+        $diaVencimento: Number(dados.diaVencimento),
+        $diasSemana: JSON.stringify(dados.diasSemana || []),
         $horarioAula: dados.horarioAula || "",
-      };
+      });
 
-      stmt.run(params);
       stmt.free();
-
       this.dbManager.save();
 
       return { success: true };
-    } catch (error: unknown) {
-      let msg = "Erro desconhecido";
-      if (error instanceof Error) msg = error.message;
-      console.error("Erro no repository create:", msg);
-      return { success: false, error: msg };
+    } catch (error: any) {
+      console.error("Erro ao criar aluno:", error);
+      return { success: false, error: error.message };
     }
   }
 
-  saveImg(file: { name: string; buffer: ArrayBuffer }): string {
-    const imagesDir = path.join(app.getPath("userData"), "images");
+  // ===============================
+  // CONFIRMAR PAGAMENTO (MÊS ATUAL)
+  // ===============================
+  confirmarPagamento(studentId: number): ApiResponse {
+    try {
+      const db = this.dbManager.getInstance();
+      const mesReferencia = new Date().toISOString().slice(0, 7);
+      const dataPagamento = new Date().toISOString();
 
-    if (!fs.existsSync(imagesDir)) {
-      fs.mkdirSync(imagesDir, { recursive: true });
+      db.run(
+        `
+        INSERT OR REPLACE INTO payments
+          (student_id, mesReferencia, valor, dataPagamento)
+        SELECT
+          id,
+          ?,
+          valorMensalidade,
+          ?
+        FROM students
+        WHERE id = ?
+      `,
+        [mesReferencia, dataPagamento, studentId],
+      );
+
+      this.dbManager.save();
+      return { success: true };
+    } catch (error: any) {
+      console.error("Erro ao confirmar pagamento:", error);
+      return { success: false, error: error.message };
     }
-
-    const ext = path.extname(file.name);
-    const fileName = crypto.randomUUID() + ext;
-    const filePath = path.join(imagesDir, fileName);
-
-    fs.writeFileSync(filePath, Buffer.from(file.buffer));
-
-    return filePath;
   }
 
+  // ===============================
+  // ATUALIZAR ALUNO
+  // ===============================
   update(student: Student): ApiResponse {
     try {
       const db = this.dbManager.getInstance();
 
-      const diaVencimentoSafe = parseInt(String(student.diaVencimento || 0));
-      const diasSemanaString = JSON.stringify(student.diasSemana || []);
-
       const stmt = db.prepare(`
-        UPDATE students 
-        SET 
+        UPDATE students SET
           nome = $nome,
           rg = $rg,
           cpf = $cpf,
@@ -175,57 +199,67 @@ export class StudentRepository {
         WHERE id = $id
       `);
 
-      const params: Record<string, SqlValue> = {
+      stmt.run({
         $id: student.id!,
         $nome: student.nome,
         $rg: student.rg,
         $cpf: student.cpf,
-
         $dataNascimento: student.dataNascimento,
         $telefone: student.telefone,
-
         $telefoneEmergencia: student.telefone2 || "",
         $endereco: student.endereco,
         $turma: student.turma,
-
-        $diasSemana: diasSemanaString,
+        $diasSemana: JSON.stringify(student.diasSemana || []),
         $horarioAula: student.horarioAula || "",
         $valorMatricula: student.valorMatricula,
         $planoMensal: student.planoMensal,
         $valorMensalidade: student.valorMensalidade,
         $formaPagamento: student.formaPagamento,
-        $diaVencimento: diaVencimentoSafe,
-
+        $diaVencimento: Number(student.diaVencimento),
         $foto: student.fotoUrl || null,
-      };
+      });
 
-      stmt.run(params);
       stmt.free();
-
       this.dbManager.save();
+
       return { success: true };
-    } catch (error: unknown) {
-      let msg = "Erro desconhecido ao atualizar";
-      if (error instanceof Error) msg = error.message;
-      console.error("Erro no repository update:", msg);
-      return { success: false, error: msg };
+    } catch (error: any) {
+      console.error("Erro ao atualizar:", error);
+      return { success: false, error: error.message };
     }
   }
+
+  // ===============================
+  // DELETAR ALUNO + PAGAMENTOS
+  // ===============================
   delete(id: number): ApiResponse {
     try {
       const db = this.dbManager.getInstance();
-
-      const stmt = db.prepare("DELETE FROM students WHERE id = $id");
-      stmt.run({ $id: id });
-      stmt.free();
-
+      db.run(`DELETE FROM payments WHERE student_id = ?`, [id]);
+      db.run(`DELETE FROM students WHERE id = ?`, [id]);
       this.dbManager.save();
       return { success: true };
-    } catch (error: unknown) {
-      let msg = "Erro ao deletar";
-      if (error instanceof Error) msg = error.message;
-      console.error("Erro no repository delete:", msg);
-      return { success: false, error: msg };
+    } catch (error: any) {
+      console.error("Erro ao deletar:", error);
+      return { success: false, error: error.message };
     }
+  }
+
+  // ===============================
+  // SALVAR IMAGEM
+  // ===============================
+  saveImg(file: { name: string; buffer: ArrayBuffer }): string {
+    const imagesDir = path.join(app.getPath("userData"), "images");
+
+    if (!fs.existsSync(imagesDir)) {
+      fs.mkdirSync(imagesDir, { recursive: true });
+    }
+
+    const ext = path.extname(file.name);
+    const fileName = crypto.randomUUID() + ext;
+    const filePath = path.join(imagesDir, fileName);
+
+    fs.writeFileSync(filePath, Buffer.from(file.buffer));
+    return filePath;
   }
 }

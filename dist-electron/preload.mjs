@@ -12,5 +12,6 @@ electron.contextBridge.exposeInMainWorld("api", {
   getClassDetails: (id) => electron.ipcRenderer.invoke("get-class-details", id),
   updateCadastro: (data) => electron.ipcRenderer.invoke("update-aluno", data),
   deleteCadastro: (id) => electron.ipcRenderer.invoke("delete-aluno", id),
-  deleteClass: (id) => electron.ipcRenderer.invoke("delete-class", id)
+  deleteClass: (id) => electron.ipcRenderer.invoke("delete-class", id),
+  confirmarPagamento: (id) => electron.ipcRenderer.invoke("confirmar-pagamento", id)
 });
