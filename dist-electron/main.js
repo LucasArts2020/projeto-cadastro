@@ -117,9 +117,6 @@ class StudentRepository {
   constructor(dbManager2) {
     this.dbManager = dbManager2;
   }
-  // ===============================
-  // LISTAR ALUNOS + STATUS DE PAGAMENTO (MÊS ATUAL)
-  // ===============================
   getAll() {
     try {
       const db = this.dbManager.getInstance();
