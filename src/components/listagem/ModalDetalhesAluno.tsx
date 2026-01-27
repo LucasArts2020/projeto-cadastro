@@ -180,9 +180,9 @@ export default function ModalDetalhesAluno({
                   onConfirmPayment(student);
                   onClose();
                 }}
-                className="px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg shadow-sm hover:shadow-md transition flex items-center gap-2 font-medium"
+                className="px-6 py-2 bg-[#8CAB91] text-white hover:bg-[#7A9B7F] rounded-lg shadow-sm hover:shadow-md transition flex items-center gap-2 font-medium"
               >
-                💰 Marcar como Pago
+                Marcar como Pago
               </button>
             )}
             <button

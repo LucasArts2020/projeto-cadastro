@@ -36,10 +36,6 @@ export class DatabaseManager {
 
   async init(): Promise<void> {
     try {
-      console.log("--- INICIANDO BANCO DE DADOS ---");
-      console.log("Lendo WASM em:", this.wasmPath);
-      console.log("Salvando DB em:", this.dbPath);
-
       if (!fs.existsSync(this.wasmPath)) {
         throw new Error(
           `CRÍTICO: Arquivo sql-wasm.wasm não encontrado no caminho: ${this.wasmPath}`,
