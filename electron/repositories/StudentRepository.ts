@@ -24,8 +24,7 @@ export interface Student {
   horarioAula?: string;
   createdAt?: string;
 
-  // ⚠️ calculado via JOIN (não existe no banco)
-  pago?: number; // 0 ou 1
+  pago?: number;
   dataPagamento?: string | null;
 }
 
@@ -38,9 +37,6 @@ export interface ApiResponse<T = void> {
 export class StudentRepository {
   constructor(private dbManager: DatabaseManager) {}
 
-  // ===============================
-  // LISTAR ALUNOS + STATUS DE PAGAMENTO (MÊS ATUAL)
-  // ===============================
   getAll(): Student[] {
     try {
       const db = this.dbManager.getInstance();
