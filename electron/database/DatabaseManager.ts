@@ -115,6 +115,10 @@ export class DatabaseManager {
       FOREIGN KEY (student_id) REFERENCES students(id),
       FOREIGN KEY (class_id) REFERENCES classes(id)
     );
+    CREATE TABLE IF NOT EXISTS class_config (
+      horario TEXT PRIMARY KEY,
+      limite INTEGER NOT NULL
+    );
   `);
 
     this.save();

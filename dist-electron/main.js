@@ -94,6 +94,10 @@ class DatabaseManager {
       FOREIGN KEY (student_id) REFERENCES students(id),
       FOREIGN KEY (class_id) REFERENCES classes(id)
     );
+    CREATE TABLE IF NOT EXISTS class_config (
+      horario TEXT PRIMARY KEY,
+      limite INTEGER NOT NULL
+    );
   `);
     this.save();
     console.log("Tabelas criadas e banco salvo.");
@@ -448,6 +452,42 @@ class AttendanceRepository {
     }
   }
 }
+class ConfigRepository {
+  constructor(dbManager2) {
+    this.dbManager = dbManager2;
+  }
+  getLimits() {
+    try {
+      const db = this.dbManager.getInstance();
+      const result = db.exec("SELECT horario, limite FROM class_config");
+      const limits = {};
+      if (result.length > 0) {
+        result[0].values.forEach((row) => {
+          const horario = row[0];
+          const limite = row[1];
+          limits[horario] = limite;
+        });
+      }
+      return limits;
+    } catch (error) {
+      console.error("Erro ao buscar limites:", error);
+      return {};
+    }
+  }
+  saveLimit(horario, limite) {
+    try {
+      const db = this.dbManager.getInstance();
+      db.run(
+        `INSERT OR REPLACE INTO class_config (horario, limite) VALUES (?, ?)`,
+        [horario, limite]
+      );
+      this.dbManager.save();
+    } catch (error) {
+      console.error("Erro ao salvar limite:", error);
+      throw error;
+    }
+  }
+}
 protocol.registerSchemesAsPrivileged([
   {
     scheme: "media",
@@ -471,6 +511,7 @@ const wasmSourcePath = path.join(process.env.VITE_PUBLIC, "sql-wasm.wasm");
 const dbManager = new DatabaseManager(dbSavePath, wasmSourcePath);
 const studentRepo = new StudentRepository(dbManager);
 const attendanceRepo = new AttendanceRepository(dbManager);
+const configRepo = new ConfigRepository(dbManager);
 let win;
 function createWindow() {
   win = new BrowserWindow({
@@ -549,6 +590,12 @@ ipcMain.handle("delete-class", (_, id) => {
 });
 ipcMain.handle("confirmar-pagamento", (_, id) => {
   return studentRepo.confirmarPagamento(id);
+});
+ipcMain.handle("get-limits", () => {
+  return configRepo.getLimits();
+});
+ipcMain.handle("save-limit", (_, { horario, limite }) => {
+  return configRepo.saveLimit(horario, limite);
 });
 export {
   MAIN_DIST,

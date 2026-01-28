@@ -6,7 +6,7 @@ import fs from "node:fs";
 import { DatabaseManager } from "./database/DatabaseManager";
 import { StudentRepository } from "./repositories/StudentRepository";
 import { AttendanceRepository } from "./repositories/AttendanceRepository";
-
+import { ConfigRepository } from "./repositories/ConfigRepository";
 protocol.registerSchemesAsPrivileged([
   {
     scheme: "media",
@@ -40,6 +40,8 @@ const dbManager = new DatabaseManager(dbSavePath, wasmSourcePath);
 const studentRepo = new StudentRepository(dbManager);
 
 const attendanceRepo = new AttendanceRepository(dbManager);
+
+const configRepo = new ConfigRepository(dbManager);
 
 let win: BrowserWindow | null;
 
@@ -138,4 +140,11 @@ ipcMain.handle("delete-class", (_, id) => {
 });
 ipcMain.handle("confirmar-pagamento", (_, id: number) => {
   return studentRepo.confirmarPagamento(id);
+});
+ipcMain.handle("get-limits", () => {
+  return configRepo.getLimits();
+});
+
+ipcMain.handle("save-limit", (_, { horario, limite }) => {
+  return configRepo.saveLimit(horario, limite);
 });

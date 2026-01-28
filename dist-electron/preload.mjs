@@ -13,5 +13,7 @@ electron.contextBridge.exposeInMainWorld("api", {
   updateCadastro: (data) => electron.ipcRenderer.invoke("update-aluno", data),
   deleteCadastro: (id) => electron.ipcRenderer.invoke("delete-aluno", id),
   deleteClass: (id) => electron.ipcRenderer.invoke("delete-class", id),
-  confirmarPagamento: (id) => electron.ipcRenderer.invoke("confirmar-pagamento", id)
+  confirmarPagamento: (id) => electron.ipcRenderer.invoke("confirmar-pagamento", id),
+  getLimits: () => electron.ipcRenderer.invoke("get-limits"),
+  saveLimit: (data) => electron.ipcRenderer.invoke("save-limit", data)
 });

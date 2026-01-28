@@ -18,4 +18,7 @@ contextBridge.exposeInMainWorld("api", {
   deleteClass: (id: number) => ipcRenderer.invoke("delete-class", id),
   confirmarPagamento: (id: number) =>
     ipcRenderer.invoke("confirmar-pagamento", id),
+  getLimits: () => ipcRenderer.invoke("get-limits"),
+  saveLimit: (data: { horario: string; limite: number }) =>
+    ipcRenderer.invoke("save-limit", data),
 });

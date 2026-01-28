@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { CadastroService } from "../services/CadastroService";
 import { AttendanceService } from "../services/AttendanceService";
+import { ConfigService } from "../services/ConfigService";
 import { Cadastro } from "../types/typeCadastro";
 import { Icons } from "../components/common/Icons";
 import Popup from "../components/layout/popup";
@@ -14,12 +15,96 @@ interface ClassGroup {
   alunos: Cadastro[];
 }
 
+function ModalConfig({
+  onClose,
+  currentLimits,
+  onSave,
+}: {
+  onClose: () => void;
+  currentLimits: Record<string, number>;
+  onSave: () => void;
+}) {
+  const horariosPossiveis = [
+    "07:00",
+    "08:00",
+    "09:00",
+    "10:00",
+    "14:00",
+    "15:00",
+    "16:00",
+    "17:00",
+    "18:00",
+    "19:00",
+    "20:00",
+  ];
+  const [limits, setLimits] = useState(currentLimits);
+
+  const handleChange = (horario: string, val: string) => {
+    setLimits((prev) => ({ ...prev, [horario]: parseInt(val) || 0 }));
+  };
+
+  const handleSave = async () => {
+    // Salva um por um (poderia otimizar no backend para salvar batch, mas assim funciona bem)
+    for (const [horario, limite] of Object.entries(limits)) {
+      await ConfigService.saveLimit(horario, limite);
+    }
+    onSave();
+    onClose();
+  };
+
+  return (
+    <Popup onClose={onClose}>
+      <div className="p-6 w-[500px] max-w-full">
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-gray-800">
+          <Icons.Settings size={24} /> Configurar Limites
+        </h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Defina a quantidade máxima de alunos por horário.
+        </p>
+
+        <div className="grid grid-cols-2 gap-4 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+          {horariosPossiveis.map((horario) => (
+            <div key={horario} className="flex flex-col gap-1">
+              <label className="text-sm text-gray-600 font-bold bg-gray-100 px-2 py-1 rounded w-fit">
+                {horario}
+              </label>
+              <input
+                type="number"
+                className="border border-gray-300 p-2 rounded-lg bg-gray-50 focus:ring-2 focus:ring-[#8CAB91] focus:border-transparent outline-none transition-all"
+                value={limits[horario] ?? 6}
+                onChange={(e) => handleChange(horario, e.target.value)}
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-6 py-2 bg-[#2C2C2C] text-white rounded-lg hover:bg-black transition-all shadow-lg hover:shadow-xl active:scale-95"
+          >
+            Salvar Alterações
+          </button>
+        </div>
+      </div>
+    </Popup>
+  );
+}
+
 export default function TelaTurmas() {
   const [students, setStudents] = useState<Cadastro[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState<ViewState>("SELECAO");
 
   const [diaFiltro, setDiaFiltro] = useState<string>(getDiaAtualSigla());
+  const [limits, setLimits] = useState<Record<string, number>>({});
+  const [showConfig, setShowConfig] = useState(false);
 
   const [selectedGroup, setSelectedGroup] = useState<ClassGroup | null>(null);
   const [presencas, setPresencas] = useState<
@@ -28,13 +113,18 @@ export default function TelaTurmas() {
   const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
-    loadStudents();
+    loadData();
   }, []);
 
-  const loadStudents = async () => {
+  const loadData = async () => {
     try {
-      const list = await CadastroService.list();
+      setLoading(true);
+      const [list, limitsData] = await Promise.all([
+        CadastroService.list(),
+        ConfigService.getLimits(),
+      ]);
       setStudents(list);
+      setLimits(limitsData);
     } finally {
       setLoading(false);
     }
@@ -54,6 +144,8 @@ export default function TelaTurmas() {
       year: "numeric",
     });
   }
+
+  const getLimitForClass = (horario: string) => limits[horario] ?? 6;
 
   const turmasDoDia = useMemo(() => {
     const groups: Record<string, ClassGroup> = {};
@@ -144,24 +236,37 @@ export default function TelaTurmas() {
               <span className="text-xl">←</span>
             </button>
           )}
-          <div>
-            <h2 className="text-2xl font-serif text-gray-800 flex items-center gap-2">
-              {currentView === "SELECAO"
-                ? "Turmas do Dia"
-                : `Chamada: ${selectedGroup?.turma}`}
+          <div className="flex items-center gap-3">
+            <div>
+              <h2 className="text-2xl font-serif text-gray-800 flex items-center gap-2">
+                {currentView === "SELECAO"
+                  ? "Turmas do Dia"
+                  : `Chamada: ${selectedGroup?.turma}`}
 
-              {currentView === "SELECAO" && (
-                <span className="text-xs font-sans font-normal bg-[#8CAB91]/10 text-[#5A7A60] px-2 py-1 rounded-md border border-[#8CAB91]/20">
-                  {getDataExibicao()}
-                </span>
-              )}
-            </h2>
+                {currentView === "SELECAO" && (
+                  <span className="text-xs font-sans font-normal bg-[#8CAB91]/10 text-[#5A7A60] px-2 py-1 rounded-md border border-[#8CAB91]/20">
+                    {getDataExibicao()}
+                  </span>
+                )}
+              </h2>
 
-            <p className="text-sm text-gray-500">
-              {currentView === "SELECAO"
-                ? "Selecione uma turma para realizar a chamada."
-                : `${selectedGroup?.horario} • ${selectedGroup?.totalAlunos} Alunos na lista`}
-            </p>
+              <p className="text-sm text-gray-500">
+                {currentView === "SELECAO"
+                  ? "Selecione uma turma para realizar a chamada."
+                  : `${selectedGroup?.horario} • ${selectedGroup?.totalAlunos} Alunos na lista`}
+              </p>
+            </div>
+
+            {/* BOTÃO SETTINGS */}
+            {currentView === "SELECAO" && (
+              <button
+                onClick={() => setShowConfig(true)}
+                className="p-2 ml-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-all"
+                title="Configurar limites de turma"
+              >
+                <Icons.Settings />
+              </button>
+            )}
           </div>
         </div>
 
@@ -203,33 +308,68 @@ export default function TelaTurmas() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {turmasDoDia.map((grupo) => (
-                  <button
-                    key={`${grupo.turma}-${grupo.horario}`}
-                    onClick={() => handleSelectClass(grupo)}
-                    className="flex flex-col bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-[#8CAB91]/50 hover:-translate-y-1 transition-all duration-300 text-left group"
-                  >
-                    <div className="flex justify-between items-start w-full mb-4">
-                      <div className="bg-[#8CAB91]/10 text-[#8CAB91] p-3 rounded-xl group-hover:bg-[#8CAB91] group-hover:text-white transition-colors">
-                        <Icons.Users />
+                {turmasDoDia.map((grupo) => {
+                  const limite = getLimitForClass(grupo.horario);
+                  const isFull = grupo.totalAlunos >= limite;
+                  const ocupacao = Math.min(
+                    (grupo.totalAlunos / limite) * 100,
+                    100,
+                  );
+
+                  return (
+                    <button
+                      key={`${grupo.turma}-${grupo.horario}`}
+                      onClick={() => handleSelectClass(grupo)}
+                      className="flex flex-col bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-[#8CAB91]/50 hover:-translate-y-1 transition-all duration-300 text-left group relative overflow-hidden"
+                    >
+                      {/* Indicador de Lotação no Topo */}
+                      <div className="absolute top-4 right-4">
+                        <span
+                          className={`text-xs font-bold px-2 py-1 rounded border ${
+                            isFull
+                              ? "bg-red-50 text-red-500 border-red-100"
+                              : "bg-gray-50 text-gray-500 border-gray-100"
+                          }`}
+                        >
+                          {grupo.totalAlunos} / {limite}
+                        </span>
                       </div>
-                      <span className="text-xs font-bold bg-gray-100 text-gray-600 px-3 py-1 rounded-full border border-gray-200">
-                        {grupo.horario}
-                      </span>
-                    </div>
 
-                    <h3 className="text-xl font-bold text-gray-800 mb-1">
-                      {grupo.turma}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      {grupo.totalAlunos} alunos esperados
-                    </p>
+                      <div className="flex justify-between items-start w-full mb-4">
+                        <div className="bg-[#8CAB91]/10 text-[#8CAB91] p-3 rounded-xl group-hover:bg-[#8CAB91] group-hover:text-white transition-colors">
+                          <Icons.Users />
+                        </div>
+                        <span className="text-xs font-bold bg-gray-100 text-gray-600 px-3 py-1 rounded-full border border-gray-200 mr-16">
+                          {grupo.horario}
+                        </span>
+                      </div>
 
-                    <div className="w-full mt-4 h-1 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-[#8CAB91] w-0 group-hover:w-full transition-all duration-700 ease-out" />
-                    </div>
-                  </button>
-                ))}
+                      <h3 className="text-xl font-bold text-gray-800 mb-1">
+                        {grupo.turma}
+                      </h3>
+
+                      {isFull ? (
+                        <p className="text-sm text-red-500 font-semibold animate-pulse">
+                          ⚠️ Turma Lotada
+                        </p>
+                      ) : (
+                        <p className="text-sm text-gray-500">
+                          {grupo.totalAlunos} alunos
+                        </p>
+                      )}
+
+                      {/* Barra de Progresso */}
+                      <div className="w-full mt-4 h-2 bg-gray-100 rounded-full overflow-hidden relative">
+                        <div
+                          className={`h-full transition-all duration-700 ease-out ${
+                            isFull ? "bg-red-500" : "bg-[#8CAB91]"
+                          }`}
+                          style={{ width: `${ocupacao}%` }}
+                        />
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </>
@@ -259,6 +399,14 @@ export default function TelaTurmas() {
             Confirmar Presenças
           </button>
         </div>
+      )}
+
+      {showConfig && (
+        <ModalConfig
+          currentLimits={limits}
+          onClose={() => setShowConfig(false)}
+          onSave={loadData}
+        />
       )}
 
       {showSuccess && (
