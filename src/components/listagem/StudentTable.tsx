@@ -15,6 +15,57 @@ export default function StudentTable({
   onDelete,
   onConfirmPayment,
 }: Props) {
+  // --- LÓGICA DE FORMATAÇÃO DO HORÁRIO ---
+  const renderHorario = (dias: any) => {
+    if (!dias || (Array.isArray(dias) && dias.length === 0)) {
+      return <span className="text-stone-400 italic text-xs">--</span>;
+    }
+
+    let listaDias: { dia: string; horario?: string }[] = [];
+
+    // Normaliza os dados (caso venha string antiga ou objeto novo)
+    if (Array.isArray(dias)) {
+      listaDias = dias.map((item: any) => {
+        if (typeof item === "string") return { dia: item, horario: "" };
+        return item;
+      });
+    }
+
+    // Ordenação dos dias (Seg -> Dom)
+    const ordem = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom"];
+    listaDias.sort((a, b) => ordem.indexOf(a.dia) - ordem.indexOf(b.dia));
+
+    // Verifica se todos os horários são iguais (para agrupar visualmente)
+    const primeiroHorario = listaDias[0]?.horario;
+    const todosIguais = listaDias.every((d) => d.horario === primeiroHorario);
+
+    // CASO 1: Horários iguais (Ex: Seg, Qua • 08:00)
+    if (todosIguais && primeiroHorario) {
+      const diasTexto = listaDias.map((d) => d.dia).join(", ");
+      return (
+        <div className="flex flex-col justify-center">
+          <span className="text-sm font-bold text-stone-700">
+            {primeiroHorario}
+          </span>
+          <span className="text-xs text-stone-500 capitalize">{diasTexto}</span>
+        </div>
+      );
+    }
+
+    // CASO 2: Horários diferentes ou mistos
+    return (
+      <div className="flex flex-col gap-1 justify-center">
+        {listaDias.map((d, idx) => (
+          <div key={idx} className="text-xs text-stone-600">
+            <span className="font-bold mr-1">{d.dia}</span>
+            <span className="text-stone-500">{d.horario || "?"}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+  // ----------------------------------------
+
   const getInitials = (name: string) => {
     const parts = name.trim().split(" ");
     if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
@@ -29,7 +80,7 @@ export default function StudentTable({
   };
 
   return (
-    <div className="bg-white shadow-sm border border-stone-100">
+    <div className="bg-white shadow-sm border border-stone-100 rounded-lg overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse min-w-full">
           <thead>
@@ -75,9 +126,10 @@ export default function StudentTable({
                 <tr
                   key={index}
                   onClick={() => onSelect(student)}
-                  className="group hover:bg-[#8CAB91]/5 transition-colors border-b border-stone-50 last:border-0 cursor-pointer relative"
+                  className="group hover:bg-[#8CAB91]/5 transition-colors border-b border-stone-50 last:border-0 cursor-pointer"
                 >
-                  <td className="px-6 py-4">
+                  {/* ALUNO - Centralizado verticalmente */}
+                  <td className="px-6 py-4 align-middle">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-full bg-[#8CAB91] text-white flex items-center justify-center font-serif font-bold text-sm shadow-sm overflow-hidden shrink-0 border border-[#8CAB91]/20">
                         {student.fotoUrl ? (
@@ -104,47 +156,44 @@ export default function StudentTable({
                     </div>
                   </td>
 
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium text-stone-700">
-                        {student.horarioAula || "—"}
-                      </span>
-                      <span className="text-xs text-stone-500 capitalize">
-                        {student.diasSemana && student.diasSemana.length > 0
-                          ? student.diasSemana.join(", ")
-                          : "Sem dias def."}
-                      </span>
-                    </div>
+                  {/* HORÁRIO - Correção aplicada aqui */}
+                  <td className="px-6 py-4 align-middle">
+                    {renderHorario(student.diasSemana)}
                   </td>
 
-                  <td className="px-6 py-4">
+                  {/* STATUS - Centralizado */}
+                  <td className="px-6 py-4 align-middle">
                     {student.pago ? (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border bg-green-50 text-green-700 border-green-200">
                         Pago
                       </span>
                     ) : (
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(student.diaVencimento)}`}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(
+                          student.diaVencimento,
+                        )}`}
                       >
-                        Pendente • vence dia {student.diaVencimento}
+                        Pendente • vence {student.diaVencimento}
                       </span>
                     )}
                   </td>
 
-                  <td className="px-6 py-4 text-right">
+                  {/* VALOR - Centralizado */}
+                  <td className="px-6 py-4 align-middle text-right">
                     <span className="font-serif font-medium text-stone-800">
                       R$ {Number(student.valorMensalidade || 0).toFixed(2)}
                     </span>
                   </td>
 
-                  <td className="px-6 py-4 text-center flex justify-center gap-2">
+                  {/* AÇÕES - Centralizado */}
+                  <td className="px-6 py-4 align-middle text-center">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         onDelete(student);
                       }}
                       title="Excluir Aluno"
-                      className="p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                      className="p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all opacity-0 group-hover:opacity-100 mx-auto"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"

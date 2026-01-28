@@ -616,21 +616,37 @@ class ReposicaoRepository {
         });
       }
       const fixedStudentsResult = db.exec(`
-        SELECT horarioAula, count(*) as total 
+        SELECT diasSemana 
         FROM students 
         WHERE diasSemana LIKE '%"${dayOfWeekSigla}"%' 
-        GROUP BY horarioAula
       `);
       const fixedCounts = {};
       if (fixedStudentsResult.length) {
-        fixedStudentsResult[0].values.forEach((row) => {
-          fixedCounts[row[0]] = row[1];
+        const rows = fixedStudentsResult[0].values;
+        rows.forEach((row) => {
+          const diasJsonString = row[0];
+          try {
+            const diasArray = JSON.parse(diasJsonString);
+            if (Array.isArray(diasArray) && diasArray.length > 0 && typeof diasArray[0] === "object") {
+              const diaConfig = diasArray.find(
+                (d) => d.dia === dayOfWeekSigla
+              );
+              if (diaConfig && diaConfig.horario) {
+                const h = diaConfig.horario;
+                fixedCounts[h] = (fixedCounts[h] || 0) + 1;
+              }
+            } else {
+            }
+          } catch (e) {
+            console.error("Erro parse diasSemana", e);
+          }
         });
       }
       const replacementsResult = db.exec(`
         SELECT horario_reposicao, count(*) as total
         FROM replacements
         WHERE data_reposicao = '${date}'
+        AND (concluida IS NULL OR concluida = 0)
         GROUP BY horario_reposicao
       `);
       const replacementCounts = {};

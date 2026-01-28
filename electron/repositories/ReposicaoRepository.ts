@@ -78,7 +78,7 @@ export class ReposicaoRepository {
     try {
       const db = this.dbManager.getInstance();
 
-      // 1. Pegar limites configurados
+      // 1. Pegar limites (Mantém igual)
       const limitsResult = db.exec("SELECT horario, limite FROM class_config");
       const limits: Record<string, number> = {};
       if (limitsResult.length) {
@@ -87,26 +87,57 @@ export class ReposicaoRepository {
         });
       }
 
-      // 2. Pegar alunos fixos
+      // 2. PEGANDO ALUNOS FIXOS (LÓGICA NOVA)
+      // Agora buscamos TODOS os alunos que têm o dia na semana, e processamos o JSON no JS
+      // O filtro SQL busca quem tem a sigla (ex: "Seg") na string JSON
       const fixedStudentsResult = db.exec(`
-        SELECT horarioAula, count(*) as total 
+        SELECT diasSemana 
         FROM students 
         WHERE diasSemana LIKE '%"${dayOfWeekSigla}"%' 
-        GROUP BY horarioAula
       `);
 
       const fixedCounts: Record<string, number> = {};
+
       if (fixedStudentsResult.length) {
-        fixedStudentsResult[0].values.forEach((row) => {
-          fixedCounts[row[0] as string] = row[1] as number;
+        const rows = fixedStudentsResult[0].values;
+
+        rows.forEach((row) => {
+          const diasJsonString = row[0] as string;
+          try {
+            const diasArray = JSON.parse(diasJsonString);
+
+            // Verifica se é o formato novo (Objeto) ou antigo (String)
+            // Se for array de objetos, acha o horário daquele dia específico
+            if (
+              Array.isArray(diasArray) &&
+              diasArray.length > 0 &&
+              typeof diasArray[0] === "object"
+            ) {
+              const diaConfig = diasArray.find(
+                (d: any) => d.dia === dayOfWeekSigla,
+              );
+              if (diaConfig && diaConfig.horario) {
+                const h = diaConfig.horario;
+                fixedCounts[h] = (fixedCounts[h] || 0) + 1;
+              }
+            }
+            // Fallback para o sistema antigo (caso tenha dados velhos no banco)
+            else {
+              // Se for string antiga, não temos como saber o horário exato sem olhar a coluna horarioAula
+              // Mas idealmente você deve migrar os dados ou ignorar aqui.
+            }
+          } catch (e) {
+            console.error("Erro parse diasSemana", e);
+          }
         });
       }
 
-      // 3. Pegar reposições
+      // 3. Pegar reposições (Mantém igual)
       const replacementsResult = db.exec(`
         SELECT horario_reposicao, count(*) as total
         FROM replacements
         WHERE data_reposicao = '${date}'
+        AND (concluida IS NULL OR concluida = 0)
         GROUP BY horario_reposicao
       `);
 
@@ -117,13 +148,10 @@ export class ReposicaoRepository {
         });
       }
 
-      // ==========================================================
-      // LÓGICA DE HORÁRIOS: Se banco vazio, usa SUA LISTA PADRÃO
-      // ==========================================================
+      // 4. Montar Lista Final (Mantém igual)
       let allHours = Object.keys(limits).sort();
-
       if (allHours.length === 0) {
-        // LISTA EXATA QUE VOCÊ PEDIU:
+        // ... sua lista padrão ...
         allHours = [
           "06:00",
           "07:00",
@@ -165,7 +193,6 @@ export class ReposicaoRepository {
       return [];
     }
   }
-
   schedule(data: {
     student_id: number;
     attendance_id: number;

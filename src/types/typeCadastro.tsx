@@ -1,3 +1,8 @@
+export interface DiaConfig {
+  dia: string;
+  horario: string;
+}
+
 export interface Cadastro {
   id?: number;
   nome: string;
@@ -10,7 +15,7 @@ export interface Cadastro {
   fotoFile?: File | null;
   fotoUrl?: string;
   turma: string;
-  diasSemana: string[];
+  diasSemana: DiaConfig[];
   horarioAula: string;
   valorMatricula: number;
   planoMensal: string;

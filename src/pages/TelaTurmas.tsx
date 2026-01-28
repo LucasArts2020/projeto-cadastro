@@ -113,16 +113,34 @@ export default function TelaTurmas() {
     const groups: Record<string, ClassGroup> = {};
 
     students.forEach((aluno) => {
-      const frequentaHoje =
-        aluno.diasSemana && aluno.diasSemana.includes(diaFiltro);
+      // Verifica se o aluno tem dias definidos
+      if (!aluno.diasSemana || !Array.isArray(aluno.diasSemana)) return;
 
-      if (frequentaHoje) {
-        addToGroup(groups, aluno);
+      // PROCURA O DIA: Lida tanto com formato novo (Objeto) quanto antigo (String)
+      const diaEncontrado = (aluno.diasSemana as any[]).find((item) => {
+        if (typeof item === "string") return item === diaFiltro;
+        return item.dia === diaFiltro;
+      });
+
+      if (diaEncontrado) {
+        // Se achou o dia, define qual horário usar
+        let horarioDoDia = aluno.horarioAula; // Padrão
+
+        // Se for o formato novo e tiver horário específico, usa ele
+        if (typeof diaEncontrado === "object" && diaEncontrado.horario) {
+          horarioDoDia = diaEncontrado.horario;
+        }
+
+        addToGroup(groups, aluno, horarioDoDia);
       }
     });
 
-    replacements.forEach((alunoRep) => {
-      addToGroup(groups, alunoRep);
+    // Adiciona as reposições (Reposições geralmente já têm horário fixo no objeto)
+    replacements.forEach((alunoRep: any) => {
+      // Para reposição, usamos o horário agendado ou o da aula
+      const horarioRep =
+        alunoRep.horarioAula || alunoRep.horario || "Reposição";
+      addToGroup(groups, alunoRep, horarioRep);
     });
 
     return Object.values(groups).sort((a, b) =>
@@ -130,8 +148,13 @@ export default function TelaTurmas() {
     );
   }, [students, replacements, diaFiltro]);
 
-  function addToGroup(groups: Record<string, ClassGroup>, aluno: any) {
-    const horario = aluno.horarioAula || "Sem Horário";
+  function addToGroup(
+    groups: Record<string, ClassGroup>,
+    aluno: any,
+    horarioEspecifico?: string, // Novo parâmetro opcional
+  ) {
+    // Se vier horário específico (do dia), usa ele. Se não, tenta o geral.
+    const horario = horarioEspecifico || aluno.horarioAula || "Sem Horário";
 
     if (!groups[horario]) {
       groups[horario] = {
@@ -172,15 +195,26 @@ export default function TelaTurmas() {
       status: presencas[student.id!] || "falta",
     }));
 
-    const dataLocal = new Date()
-      .toLocaleDateString("pt-BR")
-      .split("/")
-      .reverse()
-      .join("-");
+    // --- CÓDIGO ANTIGO (CAUSADOR DO ERRO) ---
+    // const dataLocal = new Date()
+    //   .toLocaleDateString("pt-BR")
+    //   .split("/")
+    //   .reverse()
+    //   .join("-");
+
+    // --- CÓDIGO NOVO (CORREÇÃO) ---
+    // Usa a mesma lógica de data que carregou a lista (pega a data do dia da semana selecionado)
+    const dataLocal = getDateFromDayOfWeek(diaFiltro);
+
+    if (!dataLocal) {
+      alert("Erro ao identificar a data da aula.");
+      return;
+    }
+    // ----------------------------------------
 
     const payload = {
       turma: selectedGroup.turma,
-      dataAula: dataLocal,
+      dataAula: dataLocal, // Envia a data correta (ex: do filtro selecionado)
       registros,
     };
 
@@ -188,7 +222,7 @@ export default function TelaTurmas() {
       const response = await AttendanceService.save(payload);
       if (response.success) {
         setShowSuccess(true);
-        loadReplacements(); // <--- ADICIONE ESTA LINHA AQUI
+        loadReplacements(); // Recarrega a lista para remover o aluno concluído
       } else {
         alert("Erro ao salvar: " + response.error);
       }
