@@ -7,6 +7,7 @@ import { DatabaseManager } from "./database/DatabaseManager";
 import { StudentRepository } from "./repositories/StudentRepository";
 import { AttendanceRepository } from "./repositories/AttendanceRepository";
 import { ConfigRepository } from "./repositories/ConfigRepository";
+import { ReposicaoRepository } from "./repositories/ReposicaoRepository";
 protocol.registerSchemesAsPrivileged([
   {
     scheme: "media",
@@ -42,6 +43,8 @@ const studentRepo = new StudentRepository(dbManager);
 const attendanceRepo = new AttendanceRepository(dbManager);
 
 const configRepo = new ConfigRepository(dbManager);
+
+const reposicaoRepo = new ReposicaoRepository(dbManager);
 
 let win: BrowserWindow | null;
 
@@ -148,3 +151,13 @@ ipcMain.handle("get-limits", () => {
 ipcMain.handle("save-limit", (_, { horario, limite }) => {
   return configRepo.saveLimit(horario, limite);
 });
+ipcMain.handle("get-absences", () => reposicaoRepo.getAbsences());
+ipcMain.handle("check-availability", (_, { date, dayOfWeek }) =>
+  reposicaoRepo.getAvailability(date, dayOfWeek),
+);
+ipcMain.handle("schedule-replacement", (_, data) =>
+  reposicaoRepo.schedule(data),
+);
+ipcMain.handle("get-replacements-date", (_, date) =>
+  reposicaoRepo.getReplacementsForDate(date),
+);

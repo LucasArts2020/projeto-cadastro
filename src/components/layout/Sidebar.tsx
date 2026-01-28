@@ -59,6 +59,18 @@ export default function Sidebar() {
           <span>Turmas</span>
         </NavLink>
 
+        {/* Link para Reposições adicionado aqui */}
+        <NavLink
+          to="/reposicao"
+          className={({ isActive }) =>
+            `${linkClass} ${isActive ? activeClass : inactiveClass}`
+          }
+        >
+          {/* Reutilizei o ícone Calendar, mas você pode usar Icons.CheckCircle se preferir diferenciar */}
+          <Icons.Calendar />
+          <span>Reposições</span>
+        </NavLink>
+
         <NavLink
           to="/historico"
           className={({ isActive }) =>

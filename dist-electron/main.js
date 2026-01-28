@@ -38,8 +38,8 @@ class DatabaseManager {
         console.log("Banco de dados existente carregado com sucesso.");
       } else {
         this.db = new SQL.Database();
-        this.createTables();
       }
+      this.createTables();
     } catch (err) {
       console.error("ERRO CRÍTICO AO INICIAR BANCO:", err);
       throw err;
@@ -94,13 +94,32 @@ class DatabaseManager {
       FOREIGN KEY (student_id) REFERENCES students(id),
       FOREIGN KEY (class_id) REFERENCES classes(id)
     );
+
     CREATE TABLE IF NOT EXISTS class_config (
       horario TEXT PRIMARY KEY,
       limite INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS replacements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL,
+      attendance_reference_id INTEGER, -- Adicionado para novos bancos
+      data_reposicao TEXT NOT NULL, -- Formato YYYY-MM-DD
+      horario_reposicao TEXT NOT NULL,
+      turma_origem TEXT, -- Apenas para registro
+      observacao TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (student_id) REFERENCES students(id)
+    );
   `);
+    try {
+      this.db.run(
+        "ALTER TABLE replacements ADD COLUMN attendance_reference_id INTEGER"
+      );
+    } catch (e) {
+    }
     this.save();
-    console.log("Tabelas criadas e banco salvo.");
+    console.log("Tabelas verificadas e banco salvo.");
   }
   getInstance() {
     if (!this.db) throw new Error("Banco de dados não inicializado.");
@@ -488,6 +507,175 @@ class ConfigRepository {
     }
   }
 }
+class ReposicaoRepository {
+  constructor(dbManager2) {
+    this.dbManager = dbManager2;
+  }
+  // Busca alunos com faltas recentes para sugerir reposição
+  getAbsences() {
+    try {
+      const db = this.dbManager.getInstance();
+      const result = db.exec(`
+        SELECT 
+          a.id as attendance_id,
+          c.data_aula,
+          s.id as student_id,
+          s.nome,
+          s.turma,
+          r.id as replacement_id,           
+          r.data_reposicao as data_agendada 
+        FROM attendance a
+        JOIN students s ON a.student_id = s.id
+        JOIN classes c ON a.class_id = c.id
+        LEFT JOIN replacements r ON r.attendance_reference_id = a.id 
+        WHERE a.status = 'falta'
+        ORDER BY c.data_aula DESC
+        LIMIT 50
+      `);
+      if (!result.length) return [];
+      const { columns, values } = result[0];
+      return values.map((row) => {
+        const obj = {};
+        columns.forEach((col, i) => obj[col] = row[i]);
+        return obj;
+      });
+    } catch (error) {
+      console.error("Erro ao buscar faltas:", error);
+      return [];
+    }
+  }
+  // Verifica disponibilidade para uma data específica
+  getAvailability(date, dayOfWeekSigla) {
+    try {
+      const db = this.dbManager.getInstance();
+      const limitsResult = db.exec("SELECT horario, limite FROM class_config");
+      const limits = {};
+      if (limitsResult.length) {
+        limitsResult[0].values.forEach((row) => {
+          limits[row[0]] = row[1];
+        });
+      }
+      const fixedStudentsResult = db.exec(`
+        SELECT horarioAula, count(*) as total 
+        FROM students 
+        WHERE diasSemana LIKE '%"${dayOfWeekSigla}"%' 
+        GROUP BY horarioAula
+      `);
+      const fixedCounts = {};
+      if (fixedStudentsResult.length) {
+        fixedStudentsResult[0].values.forEach((row) => {
+          fixedCounts[row[0]] = row[1];
+        });
+      }
+      const replacementsResult = db.exec(`
+        SELECT horario_reposicao, count(*) as total
+        FROM replacements
+        WHERE data_reposicao = '${date}'
+        GROUP BY horario_reposicao
+      `);
+      const replacementCounts = {};
+      if (replacementsResult.length) {
+        replacementsResult[0].values.forEach((row) => {
+          replacementCounts[row[0]] = row[1];
+        });
+      }
+      const defaultHours = [
+        "06:00",
+        "07:00",
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00",
+        "12:00",
+        "13:00",
+        "14:00",
+        "15:00",
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00",
+        "20:00",
+        "21:00"
+      ];
+      const dbHours = Object.keys(limits);
+      const allHours = Array.from(
+        /* @__PURE__ */ new Set([...defaultHours, ...dbHours])
+      ).sort();
+      const availability = [];
+      allHours.forEach((horario) => {
+        const limite = limits[horario] || 6;
+        const fixos = fixedCounts[horario] || 0;
+        const extras = replacementCounts[horario] || 0;
+        const ocupacao = fixos + extras;
+        availability.push({
+          horario,
+          limite,
+          ocupados: ocupacao,
+          vagas: Math.max(0, limite - ocupacao),
+          status: ocupacao >= limite ? "lotado" : "disponivel"
+        });
+      });
+      return availability;
+    } catch (error) {
+      console.error("Erro ao calcular disponibilidade:", error);
+      return [];
+    }
+  }
+  getReplacementsForDate(date) {
+    try {
+      const db = this.dbManager.getInstance();
+      const result = db.exec(`
+        SELECT 
+          s.*, 
+          r.horario_reposicao,
+          r.id as reposicao_id
+        FROM replacements r
+        JOIN students s ON r.student_id = s.id
+        WHERE r.data_reposicao = '${date}'
+      `);
+      if (!result.length) return [];
+      const { columns, values } = result[0];
+      return values.map((row) => {
+        const obj = {};
+        columns.forEach((col, i) => obj[col] = row[i]);
+        return {
+          ...obj,
+          horarioAula: obj.horario_reposicao,
+          // Sobrescreve o horário fixo pelo da reposição
+          telefone2: obj.telefoneEmergencia,
+          fotoUrl: obj.foto,
+          isReposicao: true
+          // Flag para identificar no front
+        };
+      });
+    } catch (error) {
+      console.error("Erro ao buscar reposições:", error);
+      return [];
+    }
+  }
+  schedule(data) {
+    try {
+      const db = this.dbManager.getInstance();
+      db.run(
+        `
+        INSERT INTO replacements (student_id, attendance_reference_id, data_reposicao, horario_reposicao, observacao)
+        VALUES (?, ?, ?, ?, ?)
+      `,
+        [
+          data.student_id,
+          data.attendance_id,
+          data.data_reposicao,
+          data.horario,
+          data.obs || ""
+        ]
+      );
+      this.dbManager.save();
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+}
 protocol.registerSchemesAsPrivileged([
   {
     scheme: "media",
@@ -512,6 +700,7 @@ const dbManager = new DatabaseManager(dbSavePath, wasmSourcePath);
 const studentRepo = new StudentRepository(dbManager);
 const attendanceRepo = new AttendanceRepository(dbManager);
 const configRepo = new ConfigRepository(dbManager);
+const reposicaoRepo = new ReposicaoRepository(dbManager);
 let win;
 function createWindow() {
   win = new BrowserWindow({
@@ -597,6 +786,19 @@ ipcMain.handle("get-limits", () => {
 ipcMain.handle("save-limit", (_, { horario, limite }) => {
   return configRepo.saveLimit(horario, limite);
 });
+ipcMain.handle("get-absences", () => reposicaoRepo.getAbsences());
+ipcMain.handle(
+  "check-availability",
+  (_, { date, dayOfWeek }) => reposicaoRepo.getAvailability(date, dayOfWeek)
+);
+ipcMain.handle(
+  "schedule-replacement",
+  (_, data) => reposicaoRepo.schedule(data)
+);
+ipcMain.handle(
+  "get-replacements-date",
+  (_, date) => reposicaoRepo.getReplacementsForDate(date)
+);
 export {
   MAIN_DIST,
   RENDERER_DIST,

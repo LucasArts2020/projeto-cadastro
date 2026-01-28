@@ -21,4 +21,11 @@ contextBridge.exposeInMainWorld("api", {
   getLimits: () => ipcRenderer.invoke("get-limits"),
   saveLimit: (data: { horario: string; limite: number }) =>
     ipcRenderer.invoke("save-limit", data),
+  getAbsences: () => ipcRenderer.invoke("get-absences"),
+  checkAvailability: (date: string, dayOfWeek: string) =>
+    ipcRenderer.invoke("check-availability", { date, dayOfWeek }),
+  scheduleReplacement: (data: any) =>
+    ipcRenderer.invoke("schedule-replacement", data),
+  getReplacementsByDate: (date: string) =>
+    ipcRenderer.invoke("get-replacements-date", date),
 });

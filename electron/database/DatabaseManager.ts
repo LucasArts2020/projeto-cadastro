@@ -57,8 +57,10 @@ export class DatabaseManager {
         console.log("Banco de dados existente carregado com sucesso.");
       } else {
         this.db = new SQL.Database() as Database;
-        this.createTables();
       }
+
+      // CORREÇÃO: Chama createTables sempre para garantir migrações e novas tabelas
+      this.createTables();
     } catch (err) {
       console.error("ERRO CRÍTICO AO INICIAR BANCO:", err);
       throw err;
@@ -115,14 +117,38 @@ export class DatabaseManager {
       FOREIGN KEY (student_id) REFERENCES students(id),
       FOREIGN KEY (class_id) REFERENCES classes(id)
     );
+
     CREATE TABLE IF NOT EXISTS class_config (
       horario TEXT PRIMARY KEY,
       limite INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS replacements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL,
+      attendance_reference_id INTEGER, -- Adicionado para novos bancos
+      data_reposicao TEXT NOT NULL, -- Formato YYYY-MM-DD
+      horario_reposicao TEXT NOT NULL,
+      turma_origem TEXT, -- Apenas para registro
+      observacao TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (student_id) REFERENCES students(id)
+    );
   `);
 
+    // ============================================================
+    // MIGRAÇÃO: Adiciona a coluna em bancos existentes
+    // ============================================================
+    try {
+      this.db.run(
+        "ALTER TABLE replacements ADD COLUMN attendance_reference_id INTEGER",
+      );
+    } catch (e) {
+      // Ignora erro se a coluna já existir
+    }
+
     this.save();
-    console.log("Tabelas criadas e banco salvo.");
+    console.log("Tabelas verificadas e banco salvo.");
   }
 
   public getInstance(): Database {

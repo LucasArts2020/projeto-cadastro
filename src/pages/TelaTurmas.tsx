@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { CadastroService } from "../services/CadastroService";
 import { AttendanceService } from "../services/AttendanceService";
 import { ConfigService } from "../services/ConfigService";
+import { ReposicaoService } from "../services/ReposicaoService"; // Importado
 import { Cadastro } from "../types/typeCadastro";
 import { Icons } from "../components/common/Icons";
 import Popup from "../components/layout/popup";
@@ -12,7 +13,7 @@ interface ClassGroup {
   turma: string;
   horario: string;
   totalAlunos: number;
-  alunos: Cadastro[];
+  alunos: (Cadastro & { isReposicao?: boolean })[]; // Tipo estendido
 }
 
 function ModalConfig({
@@ -25,10 +26,14 @@ function ModalConfig({
   onSave: () => void;
 }) {
   const horariosPossiveis = [
+    "06:00",
     "07:00",
     "08:00",
     "09:00",
     "10:00",
+    "11:00",
+    "12:00",
+    "13:00",
     "14:00",
     "15:00",
     "16:00",
@@ -36,6 +41,7 @@ function ModalConfig({
     "18:00",
     "19:00",
     "20:00",
+    "21:00",
   ];
   const [limits, setLimits] = useState(currentLimits);
 
@@ -44,7 +50,6 @@ function ModalConfig({
   };
 
   const handleSave = async () => {
-    // Salva um por um (poderia otimizar no backend para salvar batch, mas assim funciona bem)
     for (const [horario, limite] of Object.entries(limits)) {
       await ConfigService.saveLimit(horario, limite);
     }
@@ -99,6 +104,7 @@ function ModalConfig({
 
 export default function TelaTurmas() {
   const [students, setStudents] = useState<Cadastro[]>([]);
+  const [replacements, setReplacements] = useState<Cadastro[]>([]); // State para reposições
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState<ViewState>("SELECAO");
 
@@ -116,6 +122,11 @@ export default function TelaTurmas() {
     loadData();
   }, []);
 
+  // Novo useEffect: Recarrega reposições sempre que o dia muda
+  useEffect(() => {
+    loadReplacements();
+  }, [diaFiltro]);
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -130,11 +141,47 @@ export default function TelaTurmas() {
     }
   };
 
+  const loadReplacements = async () => {
+    // Calcula a data real (YYYY-MM-DD) baseada na sigla (Seg, Ter...)
+    const dataCalculada = getDateFromDayOfWeek(diaFiltro);
+    if (dataCalculada) {
+      const reps = await ReposicaoService.getReplacementsByDate(dataCalculada);
+      setReplacements(reps);
+    } else {
+      setReplacements([]);
+    }
+  };
+
   function getDiaAtualSigla() {
     const dias = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
     const hoje = new Date().getDay();
-
     return dias[hoje] === "Dom" ? "Seg" : dias[hoje];
+  }
+
+  // Helper para converter "Seg" -> "2023-10-30" (data da Segunda desta semana)
+  function getDateFromDayOfWeek(daySigla: string) {
+    const map: Record<string, number> = {
+      Dom: 0,
+      Seg: 1,
+      Ter: 2,
+      Qua: 3,
+      Qui: 4,
+      Sex: 5,
+      Sab: 6,
+    };
+    const targetDay = map[daySigla];
+    if (targetDay === undefined) return null;
+
+    const hoje = new Date();
+    const currentDay = hoje.getDay();
+
+    // Calcula a diferença para chegar no dia desejado
+    const diff = targetDay - currentDay;
+
+    const targetDate = new Date(hoje);
+    targetDate.setDate(hoje.getDate() + diff);
+
+    return targetDate.toISOString().split("T")[0];
   }
 
   function getDataExibicao() {
@@ -150,31 +197,47 @@ export default function TelaTurmas() {
   const turmasDoDia = useMemo(() => {
     const groups: Record<string, ClassGroup> = {};
 
+    // 1. Adicionar alunos FIXOS
     students.forEach((aluno) => {
       const frequentaHoje =
         aluno.diasSemana && aluno.diasSemana.includes(diaFiltro);
 
       if (frequentaHoje) {
-        const horario = aluno.horarioAula || "Sem Horário";
-
-        if (!groups[horario]) {
-          groups[horario] = {
-            turma: `Treino das ${horario}`,
-            horario: horario,
-            totalAlunos: 0,
-            alunos: [],
-          };
-        }
-
-        groups[horario].alunos.push(aluno);
-        groups[horario].totalAlunos++;
+        addToGroup(groups, aluno);
       }
+    });
+
+    // 2. Adicionar alunos de REPOSIÇÃO (já filtrados por data no backend)
+    replacements.forEach((alunoRep) => {
+      // O backend já manda o 'horarioAula' alterado para o da reposição
+      addToGroup(groups, alunoRep);
     });
 
     return Object.values(groups).sort((a, b) =>
       a.horario.localeCompare(b.horario),
     );
-  }, [students, diaFiltro]);
+  }, [students, replacements, diaFiltro]);
+
+  // Função auxiliar para evitar repetição
+  function addToGroup(groups: Record<string, ClassGroup>, aluno: any) {
+    const horario = aluno.horarioAula || "Sem Horário";
+
+    if (!groups[horario]) {
+      groups[horario] = {
+        turma: `Treino das ${horario}`,
+        horario: horario,
+        totalAlunos: 0,
+        alunos: [],
+      };
+    }
+
+    // Evita duplicatas visuais
+    const exists = groups[horario].alunos.find((a) => a.id === aluno.id);
+    if (!exists) {
+      groups[horario].alunos.push(aluno);
+      groups[horario].totalAlunos++;
+    }
+  }
 
   const handleSelectClass = (group: ClassGroup) => {
     setSelectedGroup(group);
@@ -257,7 +320,6 @@ export default function TelaTurmas() {
               </p>
             </div>
 
-            {/* BOTÃO SETTINGS */}
             {currentView === "SELECAO" && (
               <button
                 onClick={() => setShowConfig(true)}
@@ -322,7 +384,6 @@ export default function TelaTurmas() {
                       onClick={() => handleSelectClass(grupo)}
                       className="flex flex-col bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-[#8CAB91]/50 hover:-translate-y-1 transition-all duration-300 text-left group relative overflow-hidden"
                     >
-                      {/* Indicador de Lotação no Topo */}
                       <div className="absolute top-4 right-4">
                         <span
                           className={`text-xs font-bold px-2 py-1 rounded border ${
@@ -358,7 +419,6 @@ export default function TelaTurmas() {
                         </p>
                       )}
 
-                      {/* Barra de Progresso */}
                       <div className="w-full mt-4 h-2 bg-gray-100 rounded-full overflow-hidden relative">
                         <div
                           className={`h-full transition-all duration-700 ease-out ${
@@ -450,7 +510,7 @@ function CardChamada({
   status,
   onMark,
 }: {
-  student: Cadastro;
+  student: Cadastro & { isReposicao?: boolean };
   status: string;
   onMark: (id: number, s: "presente" | "falta") => void;
 }) {
@@ -461,6 +521,7 @@ function CardChamada({
       ${status === "presente" ? "border-[#8CAB91] bg-[#8CAB91]/5 shadow-sm" : ""}
       ${status === "falta" ? "border-red-200 bg-red-50/50" : ""}
       ${status === "pendente" ? "border-gray-100 hover:border-gray-300" : ""}
+      ${student.isReposicao ? "ring-2 ring-blue-100 border-blue-200" : ""} 
     `}
     >
       <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0 border border-gray-200 text-gray-400 font-bold">
@@ -477,10 +538,18 @@ function CardChamada({
 
       <div className="flex-1 min-w-0">
         <h4
-          className={`font-semibold truncate ${status === "falta" ? "text-gray-400" : "text-gray-800"}`}
+          className={`font-semibold truncate flex items-center gap-2 ${status === "falta" ? "text-gray-400" : "text-gray-800"}`}
         >
           {student.nome}
         </h4>
+
+        {/* Etiqueta Visual para Reposição */}
+        {student.isReposicao && (
+          <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider mb-1 inline-block">
+            Reposição
+          </span>
+        )}
+
         <div className="flex items-center gap-2 text-xs text-gray-500">
           {status === "presente" && (
             <span className="text-[#8CAB91] font-bold">Presente</span>

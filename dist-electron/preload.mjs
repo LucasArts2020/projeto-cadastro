@@ -15,5 +15,9 @@ electron.contextBridge.exposeInMainWorld("api", {
   deleteClass: (id) => electron.ipcRenderer.invoke("delete-class", id),
   confirmarPagamento: (id) => electron.ipcRenderer.invoke("confirmar-pagamento", id),
   getLimits: () => electron.ipcRenderer.invoke("get-limits"),
-  saveLimit: (data) => electron.ipcRenderer.invoke("save-limit", data)
+  saveLimit: (data) => electron.ipcRenderer.invoke("save-limit", data),
+  getAbsences: () => electron.ipcRenderer.invoke("get-absences"),
+  checkAvailability: (date, dayOfWeek) => electron.ipcRenderer.invoke("check-availability", { date, dayOfWeek }),
+  scheduleReplacement: (data) => electron.ipcRenderer.invoke("schedule-replacement", data),
+  getReplacementsByDate: (date) => electron.ipcRenderer.invoke("get-replacements-date", date)
 });
