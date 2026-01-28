@@ -103,11 +103,12 @@ class DatabaseManager {
     CREATE TABLE IF NOT EXISTS replacements (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       student_id INTEGER NOT NULL,
-      attendance_reference_id INTEGER, -- Adicionado para novos bancos
-      data_reposicao TEXT NOT NULL, -- Formato YYYY-MM-DD
+      attendance_reference_id INTEGER,
+      data_reposicao TEXT NOT NULL,
       horario_reposicao TEXT NOT NULL,
-      turma_origem TEXT, -- Apenas para registro
+      turma_origem TEXT,
       observacao TEXT,
+      concluida INTEGER DEFAULT 0, -- Coluna nova
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (student_id) REFERENCES students(id)
     );
@@ -115,6 +116,12 @@ class DatabaseManager {
     try {
       this.db.run(
         "ALTER TABLE replacements ADD COLUMN attendance_reference_id INTEGER"
+      );
+    } catch (e) {
+    }
+    try {
+      this.db.run(
+        "ALTER TABLE replacements ADD COLUMN concluida INTEGER DEFAULT 0"
       );
     } catch (e) {
     }
@@ -360,14 +367,27 @@ class AttendanceRepository {
       const stmtAttendance = db.prepare(
         "INSERT INTO attendance (student_id, class_id, status) VALUES ($studentId, $classId, $status)"
       );
+      const presentesIds = [];
       data.registros.forEach((reg) => {
         stmtAttendance.run({
           $studentId: reg.studentId,
           $classId: classId,
           $status: reg.status
         });
+        if (reg.status === "presente") {
+          presentesIds.push(reg.studentId);
+        }
       });
       stmtAttendance.free();
+      if (presentesIds.length > 0) {
+        const idsString = presentesIds.join(",");
+        db.run(`
+          UPDATE replacements 
+          SET concluida = 1 
+          WHERE data_reposicao = '${data.dataAula}' 
+          AND student_id IN (${idsString})
+        `);
+      }
       db.exec("COMMIT");
       this.dbManager.save();
       return { success: true };
@@ -565,6 +585,7 @@ class ReposicaoRepository {
         FROM replacements r
         JOIN students s ON r.student_id = s.id
         WHERE r.data_reposicao = '${date}'
+        AND (r.concluida IS NULL OR r.concluida = 0) -- FILTRO NOVO
       `);
       if (!result.length) return [];
       const { columns, values } = result[0];

@@ -126,11 +126,12 @@ export class DatabaseManager {
     CREATE TABLE IF NOT EXISTS replacements (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       student_id INTEGER NOT NULL,
-      attendance_reference_id INTEGER, -- Adicionado para novos bancos
-      data_reposicao TEXT NOT NULL, -- Formato YYYY-MM-DD
+      attendance_reference_id INTEGER,
+      data_reposicao TEXT NOT NULL,
       horario_reposicao TEXT NOT NULL,
-      turma_origem TEXT, -- Apenas para registro
+      turma_origem TEXT,
       observacao TEXT,
+      concluida INTEGER DEFAULT 0, -- Coluna nova
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (student_id) REFERENCES students(id)
     );
@@ -142,6 +143,13 @@ export class DatabaseManager {
     try {
       this.db.run(
         "ALTER TABLE replacements ADD COLUMN attendance_reference_id INTEGER",
+      );
+    } catch (e) {
+      // Ignora erro se a coluna já existir
+    }
+    try {
+      this.db.run(
+        "ALTER TABLE replacements ADD COLUMN concluida INTEGER DEFAULT 0",
       );
     } catch (e) {
       // Ignora erro se a coluna já existir

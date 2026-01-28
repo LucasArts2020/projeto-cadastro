@@ -61,7 +61,7 @@ export default function StepPresenceData({ data, onChange }: Props) {
     <div className="grid grid-cols-1 gap-6 animate-fade-in">
       <div>
         <h3 className="text-xl font-bold text-gray-800 mb-1">
-          Horário de Treino
+          Horário de Aula
         </h3>
         <p className="text-sm text-gray-500">
           Defina o horário fixo e os dias da semana do aluno.

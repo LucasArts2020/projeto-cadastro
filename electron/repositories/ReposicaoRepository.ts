@@ -51,6 +51,7 @@ export class ReposicaoRepository {
         FROM replacements r
         JOIN students s ON r.student_id = s.id
         WHERE r.data_reposicao = '${date}'
+        AND (r.concluida IS NULL OR r.concluida = 0) -- FILTRO NOVO
       `);
 
       if (!result.length) return [];

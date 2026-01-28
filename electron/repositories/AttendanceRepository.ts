@@ -17,13 +17,13 @@ export class AttendanceRepository {
   constructor(dbManager: DatabaseManager) {
     this.dbManager = dbManager;
   }
-
   save(data: SaveAttendanceDTO) {
     const db = this.dbManager.getInstance();
 
     try {
       db.exec("BEGIN TRANSACTION");
 
+      // 1. Criar ou Vincular Aula
       const stmtClass = db.prepare(
         "INSERT INTO classes (turma, data_aula) VALUES ($turma, $data_aula)",
       );
@@ -37,9 +37,12 @@ export class AttendanceRepository {
       const classId = result[0].values[0][0];
       stmtClass.free();
 
+      // 2. Salvar Presenças
       const stmtAttendance = db.prepare(
         "INSERT INTO attendance (student_id, class_id, status) VALUES ($studentId, $classId, $status)",
       );
+
+      const presentesIds: number[] = [];
 
       data.registros.forEach((reg) => {
         stmtAttendance.run({
@@ -47,11 +50,28 @@ export class AttendanceRepository {
           $classId: classId,
           $status: reg.status,
         });
+
+        // Se o aluno estava presente, guardamos o ID dele
+        if (reg.status === "presente") {
+          presentesIds.push(reg.studentId);
+        }
       });
 
       stmtAttendance.free();
-      db.exec("COMMIT");
 
+      // 3. ATUALIZAÇÃO AUTOMÁTICA DE REPOSIÇÃO [LÓGICA NOVA]
+      if (presentesIds.length > 0) {
+        const idsString = presentesIds.join(",");
+        // Marca como concluída (1) se a data bater e o aluno estiver na lista de presentes
+        db.run(`
+          UPDATE replacements 
+          SET concluida = 1 
+          WHERE data_reposicao = '${data.dataAula}' 
+          AND student_id IN (${idsString})
+        `);
+      }
+
+      db.exec("COMMIT");
       this.dbManager.save();
 
       return { success: true };

@@ -135,7 +135,7 @@ export default function TelaTurmas() {
 
     if (!groups[horario]) {
       groups[horario] = {
-        turma: `Treino das ${horario}`,
+        turma: `Aula das ${horario}`,
         horario: horario,
         totalAlunos: 0,
         alunos: [],
@@ -188,6 +188,7 @@ export default function TelaTurmas() {
       const response = await AttendanceService.save(payload);
       if (response.success) {
         setShowSuccess(true);
+        loadReplacements(); // <--- ADICIONE ESTA LINHA AQUI
       } else {
         alert("Erro ao salvar: " + response.error);
       }
@@ -196,7 +197,6 @@ export default function TelaTurmas() {
       alert("Erro de conexão.");
     }
   };
-
   return (
     <div className="flex flex-col h-full relative bg-gray-50/30">
       <div className="p-6 border-b border-gray-100 bg-white flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-10 shadow-sm">
