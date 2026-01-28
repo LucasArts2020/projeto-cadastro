@@ -1,4 +1,3 @@
-// src/pages/TelaReposicao.tsx
 import { useState, useEffect } from "react";
 import { ReposicaoService } from "../services/ReposicaoService";
 import { Icons } from "../components/common/Icons";
@@ -7,9 +6,17 @@ import Popup from "../components/layout/popup";
 export default function TelaReposicao() {
   const [absences, setAbsences] = useState<any[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
-  const [targetDate, setTargetDate] = useState(
-    new Date().toISOString().split("T")[0],
-  );
+
+  // CORREÇÃO: Usar data local para inicialização
+  const getTodayLocal = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const [targetDate, setTargetDate] = useState(getTodayLocal());
   const [slots, setSlots] = useState<any[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
@@ -29,9 +36,11 @@ export default function TelaReposicao() {
 
   const loadSlots = async () => {
     setLoadingSlots(true);
+
     const dateObj = new Date(targetDate + "T12:00:00");
     const dias = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
     const diaSemana = dias[dateObj.getDay()];
+
     const availability = await ReposicaoService.checkAvailability(
       targetDate,
       diaSemana,
@@ -43,7 +52,6 @@ export default function TelaReposicao() {
   const handleAgendar = async (slot: any) => {
     if (!selectedStudent) return;
 
-    // Confirmação
     const confirm = window.confirm(
       `Agendar reposição para ${selectedStudent.nome} no dia ${targetDate} às ${slot.horario}?`,
     );
@@ -51,7 +59,7 @@ export default function TelaReposicao() {
     if (confirm) {
       const res = await ReposicaoService.schedule({
         student_id: selectedStudent.student_id,
-        attendance_id: selectedStudent.attendance_id, // Passando o ID da falta
+        attendance_id: selectedStudent.attendance_id,
         data_reposicao: targetDate,
         horario: slot.horario,
       });
@@ -59,7 +67,7 @@ export default function TelaReposicao() {
       if (res.success) {
         setSuccessMsg(`Agendado com sucesso!`);
         setSelectedStudent(null);
-        loadAbsences(); // Recarrega a lista para mostrar como concluído
+        loadAbsences();
         loadSlots();
       } else {
         alert("Erro ao agendar");
@@ -87,13 +95,12 @@ export default function TelaReposicao() {
             </div>
           ) : (
             absences.map((item) => {
-              // Verifica se já tem reposição agendada (vem do SQL)
               const isScheduled = !!item.replacement_id;
 
               return (
                 <button
                   key={item.attendance_id}
-                  disabled={isScheduled} // Bloqueia clique se já agendou
+                  disabled={isScheduled}
                   onClick={() => setSelectedStudent(item)}
                   className={`w-full text-left p-3 rounded-xl mb-2 transition-all border relative overflow-hidden
                     ${
@@ -135,7 +142,7 @@ export default function TelaReposicao() {
         </div>
       </div>
 
-      {/* CALENDÁRIO (Direita) - Mantido igual, apenas lógica de disabled */}
+      {/* CALENDÁRIO */}
       <div className="flex-1 flex flex-col gap-6">
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
           <label className="font-bold text-gray-700">Data da Reposição:</label>

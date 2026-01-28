@@ -19,5 +19,6 @@ electron.contextBridge.exposeInMainWorld("api", {
   getAbsences: () => electron.ipcRenderer.invoke("get-absences"),
   checkAvailability: (date, dayOfWeek) => electron.ipcRenderer.invoke("check-availability", { date, dayOfWeek }),
   scheduleReplacement: (data) => electron.ipcRenderer.invoke("schedule-replacement", data),
-  getReplacementsByDate: (date) => electron.ipcRenderer.invoke("get-replacements-date", date)
+  getReplacementsByDate: (date) => electron.ipcRenderer.invoke("get-replacements-date", date),
+  deleteLimit: (horario) => electron.ipcRenderer.invoke("delete-limit", horario)
 });

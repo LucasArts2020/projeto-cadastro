@@ -80,6 +80,15 @@ export default function Sidebar() {
           <Icons.FileText />
           <span>Histórico</span>
         </NavLink>
+        <NavLink
+          to="/configuracoes"
+          className={({ isActive }) =>
+            `${linkClass} ${isActive ? activeClass : inactiveClass}`
+          }
+        >
+          <Icons.Settings />
+          <span>Configurações</span>
+        </NavLink>
       </nav>
     </aside>
   );

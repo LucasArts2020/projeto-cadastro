@@ -1,7 +1,8 @@
-import { useEffect } from "react"; // <--- Importe o useEffect
+import { useEffect, useState } from "react";
 import FormInput from "../common/FormInput";
 import { Cadastro } from "../../types/typeCadastro";
-import { OPCOES_HORARIOS, NOME_PADRAO } from "../../utils/options";
+import { NOME_PADRAO, OPCOES_HORARIOS } from "../../utils/options"; // Mantém como fallback
+import { ConfigService } from "../../services/ConfigService"; // Importe o serviço
 
 interface Props {
   data: Cadastro;
@@ -18,13 +19,35 @@ const DIAS_OPCOES = [
 ];
 
 export default function StepPresenceData({ data, onChange }: Props) {
-  const opcoesHorarios = OPCOES_HORARIOS.map((h) => ({ label: h, value: h }));
+  // Estado local para guardar os horários (inicia com o padrão, mas será atualizado)
+  const [schedules, setSchedules] = useState(
+    OPCOES_HORARIOS.map((h) => ({ label: h, value: h })),
+  );
 
   useEffect(() => {
     if (data.turma !== NOME_PADRAO) {
       onChange("turma", NOME_PADRAO);
     }
+
+    // Carrega os horários configurados no banco
+    loadDynamicSchedules();
   }, []);
+
+  const loadDynamicSchedules = async () => {
+    try {
+      // Busca os limites salvos no banco
+      const limits = await ConfigService.getLimits();
+      const dbTimes = Object.keys(limits);
+
+      // Se houver horários configurados no banco, usa eles
+      if (dbTimes.length > 0) {
+        const sortedTimes = dbTimes.sort(); // Ordena (06:00, 07:00...)
+        setSchedules(sortedTimes.map((h) => ({ label: h, value: h })));
+      }
+    } catch (error) {
+      console.error("Erro ao carregar horários dinâmicos:", error);
+    }
+  };
 
   const toggleDia = (dia: string) => {
     const atuais = data.diasSemana || [];
@@ -49,7 +72,7 @@ export default function StepPresenceData({ data, onChange }: Props) {
         label="Horário Fixo"
         name="horarioAula"
         type="select"
-        options={opcoesHorarios}
+        options={schedules} // Agora usa a lista dinâmica
         value={data.horarioAula}
         onChange={onChange}
         autoFocus

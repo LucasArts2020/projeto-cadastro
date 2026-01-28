@@ -161,3 +161,6 @@ ipcMain.handle("schedule-replacement", (_, data) =>
 ipcMain.handle("get-replacements-date", (_, date) =>
   reposicaoRepo.getReplacementsForDate(date),
 );
+ipcMain.handle("delete-limit", (_, horario) => {
+  return configRepo.deleteLimit(horario);
+});

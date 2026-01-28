@@ -28,4 +28,5 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.invoke("schedule-replacement", data),
   getReplacementsByDate: (date: string) =>
     ipcRenderer.invoke("get-replacements-date", date),
+  deleteLimit: (horario: string) => ipcRenderer.invoke("delete-limit", horario),
 });

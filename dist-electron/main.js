@@ -506,12 +506,22 @@ class ConfigRepository {
       throw error;
     }
   }
+  deleteLimit(horario) {
+    try {
+      const db = this.dbManager.getInstance();
+      db.run(`DELETE FROM class_config WHERE horario = ?`, [horario]);
+      this.dbManager.save();
+    } catch (error) {
+      console.error("Erro ao deletar limite:", error);
+      throw error;
+    }
+  }
 }
 class ReposicaoRepository {
   constructor(dbManager2) {
     this.dbManager = dbManager2;
   }
-  // Busca alunos com faltas recentes para sugerir reposição
+  // Busca alunos com faltas e verifica se já agendaram reposição
   getAbsences() {
     try {
       const db = this.dbManager.getInstance();
@@ -522,12 +532,12 @@ class ReposicaoRepository {
           s.id as student_id,
           s.nome,
           s.turma,
-          r.id as replacement_id,           
-          r.data_reposicao as data_agendada 
+          r.id as replacement_id,
+          r.data_reposicao as data_agendada
         FROM attendance a
         JOIN students s ON a.student_id = s.id
         JOIN classes c ON a.class_id = c.id
-        LEFT JOIN replacements r ON r.attendance_reference_id = a.id 
+        LEFT JOIN replacements r ON r.attendance_reference_id = a.id
         WHERE a.status = 'falta'
         ORDER BY c.data_aula DESC
         LIMIT 50
@@ -544,7 +554,36 @@ class ReposicaoRepository {
       return [];
     }
   }
-  // Verifica disponibilidade para uma data específica
+  getReplacementsForDate(date) {
+    try {
+      const db = this.dbManager.getInstance();
+      const result = db.exec(`
+        SELECT 
+          s.*, 
+          r.horario_reposicao,
+          r.id as reposicao_id
+        FROM replacements r
+        JOIN students s ON r.student_id = s.id
+        WHERE r.data_reposicao = '${date}'
+      `);
+      if (!result.length) return [];
+      const { columns, values } = result[0];
+      return values.map((row) => {
+        const obj = {};
+        columns.forEach((col, i) => obj[col] = row[i]);
+        return {
+          ...obj,
+          horarioAula: obj.horario_reposicao,
+          telefone2: obj.telefoneEmergencia,
+          fotoUrl: obj.foto,
+          isReposicao: true
+        };
+      });
+    } catch (error) {
+      console.error("Erro ao buscar reposições:", error);
+      return [];
+    }
+  }
   getAvailability(date, dayOfWeekSigla) {
     try {
       const db = this.dbManager.getInstance();
@@ -579,28 +618,25 @@ class ReposicaoRepository {
           replacementCounts[row[0]] = row[1];
         });
       }
-      const defaultHours = [
-        "06:00",
-        "07:00",
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00",
-        "12:00",
-        "13:00",
-        "14:00",
-        "15:00",
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00",
-        "20:00",
-        "21:00"
-      ];
-      const dbHours = Object.keys(limits);
-      const allHours = Array.from(
-        /* @__PURE__ */ new Set([...defaultHours, ...dbHours])
-      ).sort();
+      let allHours = Object.keys(limits).sort();
+      if (allHours.length === 0) {
+        allHours = [
+          "06:00",
+          "07:00",
+          "08:00",
+          "09:00",
+          "10:00",
+          "12:00",
+          "15:00",
+          "16:00",
+          "17:00",
+          "18:00",
+          "19:00",
+          "19:30",
+          "20:00",
+          "21:00"
+        ];
+      }
       const availability = [];
       allHours.forEach((horario) => {
         const limite = limits[horario] || 6;
@@ -618,38 +654,6 @@ class ReposicaoRepository {
       return availability;
     } catch (error) {
       console.error("Erro ao calcular disponibilidade:", error);
-      return [];
-    }
-  }
-  getReplacementsForDate(date) {
-    try {
-      const db = this.dbManager.getInstance();
-      const result = db.exec(`
-        SELECT 
-          s.*, 
-          r.horario_reposicao,
-          r.id as reposicao_id
-        FROM replacements r
-        JOIN students s ON r.student_id = s.id
-        WHERE r.data_reposicao = '${date}'
-      `);
-      if (!result.length) return [];
-      const { columns, values } = result[0];
-      return values.map((row) => {
-        const obj = {};
-        columns.forEach((col, i) => obj[col] = row[i]);
-        return {
-          ...obj,
-          horarioAula: obj.horario_reposicao,
-          // Sobrescreve o horário fixo pelo da reposição
-          telefone2: obj.telefoneEmergencia,
-          fotoUrl: obj.foto,
-          isReposicao: true
-          // Flag para identificar no front
-        };
-      });
-    } catch (error) {
-      console.error("Erro ao buscar reposições:", error);
       return [];
     }
   }
@@ -799,6 +803,9 @@ ipcMain.handle(
   "get-replacements-date",
   (_, date) => reposicaoRepo.getReplacementsForDate(date)
 );
+ipcMain.handle("delete-limit", (_, horario) => {
+  return configRepo.deleteLimit(horario);
+});
 export {
   MAIN_DIST,
   RENDERER_DIST,

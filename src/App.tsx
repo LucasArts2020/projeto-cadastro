@@ -7,6 +7,7 @@ import WrapperLista from "./components/layout/WrapperLista";
 import WrapperTurmas from "./components/layout/WrapperTurmas";
 import WrapperHistorico from "./components/layout/WrapperHistorico";
 import TelaReposicao from "./pages/TelaReposicao";
+import TelaConfiguracoes from "./pages/TelaConfiguracoes";
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
               <Route path="/turmas" element={<WrapperTurmas />} />
               <Route path="/historico" element={<WrapperHistorico />} />
               <Route path="/reposicao" element={<TelaReposicao />} />
+              <Route path="/configuracoes" element={<TelaConfiguracoes />} />
             </Routes>
           </main>
         </div>

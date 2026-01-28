@@ -7,4 +7,8 @@ export const ConfigService = {
     // @ts-ignore
     return await window.api.saveLimit({ horario, limite });
   },
+  async deleteLimit(horario: string): Promise<void> {
+    // @ts-ignore
+    return await window.api.deleteLimit(horario);
+  },
 };

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { CadastroService } from "../services/CadastroService";
 import { AttendanceService } from "../services/AttendanceService";
 import { ConfigService } from "../services/ConfigService";
-import { ReposicaoService } from "../services/ReposicaoService"; // Importado
+import { ReposicaoService } from "../services/ReposicaoService";
 import { Cadastro } from "../types/typeCadastro";
 import { Icons } from "../components/common/Icons";
 import Popup from "../components/layout/popup";
@@ -13,104 +13,19 @@ interface ClassGroup {
   turma: string;
   horario: string;
   totalAlunos: number;
-  alunos: (Cadastro & { isReposicao?: boolean })[]; // Tipo estendido
-}
-
-function ModalConfig({
-  onClose,
-  currentLimits,
-  onSave,
-}: {
-  onClose: () => void;
-  currentLimits: Record<string, number>;
-  onSave: () => void;
-}) {
-  const horariosPossiveis = [
-    "06:00",
-    "07:00",
-    "08:00",
-    "09:00",
-    "10:00",
-    "11:00",
-    "12:00",
-    "13:00",
-    "14:00",
-    "15:00",
-    "16:00",
-    "17:00",
-    "18:00",
-    "19:00",
-    "20:00",
-    "21:00",
-  ];
-  const [limits, setLimits] = useState(currentLimits);
-
-  const handleChange = (horario: string, val: string) => {
-    setLimits((prev) => ({ ...prev, [horario]: parseInt(val) || 0 }));
-  };
-
-  const handleSave = async () => {
-    for (const [horario, limite] of Object.entries(limits)) {
-      await ConfigService.saveLimit(horario, limite);
-    }
-    onSave();
-    onClose();
-  };
-
-  return (
-    <Popup onClose={onClose}>
-      <div className="p-6 w-[500px] max-w-full">
-        <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-gray-800">
-          <Icons.Settings size={24} /> Configurar Limites
-        </h2>
-        <p className="text-sm text-gray-500 mb-4">
-          Defina a quantidade máxima de alunos por horário.
-        </p>
-
-        <div className="grid grid-cols-2 gap-4 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-          {horariosPossiveis.map((horario) => (
-            <div key={horario} className="flex flex-col gap-1">
-              <label className="text-sm text-gray-600 font-bold bg-gray-100 px-2 py-1 rounded w-fit">
-                {horario}
-              </label>
-              <input
-                type="number"
-                className="border border-gray-300 p-2 rounded-lg bg-gray-50 focus:ring-2 focus:ring-[#8CAB91] focus:border-transparent outline-none transition-all"
-                value={limits[horario] ?? 6}
-                onChange={(e) => handleChange(horario, e.target.value)}
-              />
-            </div>
-          ))}
-        </div>
-
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-6 py-2 bg-[#2C2C2C] text-white rounded-lg hover:bg-black transition-all shadow-lg hover:shadow-xl active:scale-95"
-          >
-            Salvar Alterações
-          </button>
-        </div>
-      </div>
-    </Popup>
-  );
+  alunos: (Cadastro & { isReposicao?: boolean })[];
 }
 
 export default function TelaTurmas() {
   const [students, setStudents] = useState<Cadastro[]>([]);
-  const [replacements, setReplacements] = useState<Cadastro[]>([]); // State para reposições
+  const [replacements, setReplacements] = useState<Cadastro[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState<ViewState>("SELECAO");
 
   const [diaFiltro, setDiaFiltro] = useState<string>(getDiaAtualSigla());
   const [limits, setLimits] = useState<Record<string, number>>({});
-  const [showConfig, setShowConfig] = useState(false);
+
+  // Estado "showConfig" foi removido pois agora existe uma tela dedicada.
 
   const [selectedGroup, setSelectedGroup] = useState<ClassGroup | null>(null);
   const [presencas, setPresencas] = useState<
@@ -122,7 +37,6 @@ export default function TelaTurmas() {
     loadData();
   }, []);
 
-  // Novo useEffect: Recarrega reposições sempre que o dia muda
   useEffect(() => {
     loadReplacements();
   }, [diaFiltro]);
@@ -142,7 +56,6 @@ export default function TelaTurmas() {
   };
 
   const loadReplacements = async () => {
-    // Calcula a data real (YYYY-MM-DD) baseada na sigla (Seg, Ter...)
     const dataCalculada = getDateFromDayOfWeek(diaFiltro);
     if (dataCalculada) {
       const reps = await ReposicaoService.getReplacementsByDate(dataCalculada);
@@ -158,7 +71,6 @@ export default function TelaTurmas() {
     return dias[hoje] === "Dom" ? "Seg" : dias[hoje];
   }
 
-  // Helper para converter "Seg" -> "2023-10-30" (data da Segunda desta semana)
   function getDateFromDayOfWeek(daySigla: string) {
     const map: Record<string, number> = {
       Dom: 0,
@@ -175,13 +87,16 @@ export default function TelaTurmas() {
     const hoje = new Date();
     const currentDay = hoje.getDay();
 
-    // Calcula a diferença para chegar no dia desejado
     const diff = targetDay - currentDay;
 
     const targetDate = new Date(hoje);
     targetDate.setDate(hoje.getDate() + diff);
 
-    return targetDate.toISOString().split("T")[0];
+    const year = targetDate.getFullYear();
+    const month = String(targetDate.getMonth() + 1).padStart(2, "0");
+    const day = String(targetDate.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
   }
 
   function getDataExibicao() {
@@ -197,7 +112,6 @@ export default function TelaTurmas() {
   const turmasDoDia = useMemo(() => {
     const groups: Record<string, ClassGroup> = {};
 
-    // 1. Adicionar alunos FIXOS
     students.forEach((aluno) => {
       const frequentaHoje =
         aluno.diasSemana && aluno.diasSemana.includes(diaFiltro);
@@ -207,9 +121,7 @@ export default function TelaTurmas() {
       }
     });
 
-    // 2. Adicionar alunos de REPOSIÇÃO (já filtrados por data no backend)
     replacements.forEach((alunoRep) => {
-      // O backend já manda o 'horarioAula' alterado para o da reposição
       addToGroup(groups, alunoRep);
     });
 
@@ -218,7 +130,6 @@ export default function TelaTurmas() {
     );
   }, [students, replacements, diaFiltro]);
 
-  // Função auxiliar para evitar repetição
   function addToGroup(groups: Record<string, ClassGroup>, aluno: any) {
     const horario = aluno.horarioAula || "Sem Horário";
 
@@ -231,7 +142,6 @@ export default function TelaTurmas() {
       };
     }
 
-    // Evita duplicatas visuais
     const exists = groups[horario].alunos.find((a) => a.id === aluno.id);
     if (!exists) {
       groups[horario].alunos.push(aluno);
@@ -319,16 +229,7 @@ export default function TelaTurmas() {
                   : `${selectedGroup?.horario} • ${selectedGroup?.totalAlunos} Alunos na lista`}
               </p>
             </div>
-
-            {currentView === "SELECAO" && (
-              <button
-                onClick={() => setShowConfig(true)}
-                className="p-2 ml-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-all"
-                title="Configurar limites de turma"
-              >
-                <Icons.Settings />
-              </button>
-            )}
+            {/* Botão de configuração removido daqui */}
           </div>
         </div>
 
@@ -461,14 +362,6 @@ export default function TelaTurmas() {
         </div>
       )}
 
-      {showConfig && (
-        <ModalConfig
-          currentLimits={limits}
-          onClose={() => setShowConfig(false)}
-          onSave={loadData}
-        />
-      )}
-
       {showSuccess && (
         <Popup
           onClose={() => {
@@ -543,7 +436,6 @@ function CardChamada({
           {student.nome}
         </h4>
 
-        {/* Etiqueta Visual para Reposição */}
         {student.isReposicao && (
           <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider mb-1 inline-block">
             Reposição

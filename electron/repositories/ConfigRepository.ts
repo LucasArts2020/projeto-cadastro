@@ -36,4 +36,14 @@ export class ConfigRepository {
       throw error;
     }
   }
+  deleteLimit(horario: string): void {
+    try {
+      const db = this.dbManager.getInstance();
+      db.run(`DELETE FROM class_config WHERE horario = ?`, [horario]);
+      this.dbManager.save();
+    } catch (error) {
+      console.error("Erro ao deletar limite:", error);
+      throw error;
+    }
+  }
 }
