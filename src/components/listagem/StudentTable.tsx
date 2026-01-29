@@ -13,7 +13,6 @@ export default function StudentTable({
   loading,
   onSelect,
   onDelete,
-  onConfirmPayment,
 }: Props) {
   // --- LÓGICA DE FORMATAÇÃO DO HORÁRIO ---
   const renderHorario = (dias: any) => {

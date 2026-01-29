@@ -1,4 +1,4 @@
-import { DatabaseManager, SqlValue } from "../database/DatabaseManager";
+import { DatabaseManager } from "../database/DatabaseManager";
 import path from "node:path";
 import fs from "node:fs";
 import { app } from "electron";
