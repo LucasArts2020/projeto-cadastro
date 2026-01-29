@@ -108,7 +108,16 @@ export default function TelaListagem() {
       const matchesDias =
         filters.dias.length === 0 ||
         (s.diasSemana &&
-          s.diasSemana.some((diaAluno) => filters.dias.includes(diaAluno)));
+          s.diasSemana.some((diaAluno: any) => {
+            if (typeof diaAluno === "object" && diaAluno.dia) {
+              return filters.dias.includes(diaAluno.dia);
+            }
+
+            if (typeof diaAluno === "string") {
+              return filters.dias.includes(diaAluno);
+            }
+            return false;
+          }));
 
       const matchesDiaVenc =
         filters.diaVencimento === "" ||

@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Cadastro, DiaConfig } from "../../types/typeCadastro";
 import { NOME_PADRAO, OPCOES_HORARIOS } from "../../utils/options";
 import { ConfigService } from "../../services/ConfigService";
-import { Icons } from "../common/Icons"; // Assumindo que você tem ícones, ou use texto
 
 interface Props {
   data: Cadastro;

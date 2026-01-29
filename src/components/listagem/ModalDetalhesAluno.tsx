@@ -16,12 +16,58 @@ export default function ModalDetalhesAluno({
   onConfirmPayment,
 }: Props) {
   const formatMoney = (val?: number) => `R$ ${(Number(val) || 0).toFixed(2)}`;
+
   const getPhoto = () =>
     student.fotoUrl ? `media://${student.fotoUrl.replace(/\\/g, "/")}` : null;
+
+  // --- NOVA FUNÇÃO DE RENDERIZAÇÃO DE HORÁRIOS ---
+  const renderCronograma = () => {
+    const dias = student.diasSemana;
+    if (!dias || (Array.isArray(dias) && dias.length === 0)) {
+      return <span className="text-stone-400 italic">Nenhum dia definido</span>;
+    }
+
+    if (Array.isArray(dias)) {
+      // Ordena os dias (Seg -> Dom)
+      const ordem = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom"];
+      const listaOrdenada = [...dias].sort((a: any, b: any) => {
+        const diaA = typeof a === "string" ? a : a.dia;
+        const diaB = typeof b === "string" ? b : b.dia;
+        return ordem.indexOf(diaA) - ordem.indexOf(diaB);
+      });
+
+      return (
+        <div className="flex flex-wrap gap-2">
+          {listaOrdenada.map((item: any, idx) => {
+            // Lida com formato Novo (Objeto) e Antigo (String)
+            const dia = typeof item === "string" ? item : item.dia;
+            const hora = typeof item === "string" ? "" : item.horario;
+
+            return (
+              <div
+                key={idx}
+                className="flex items-center gap-2 bg-stone-50 border border-stone-200 px-3 py-2 rounded-lg"
+              >
+                <span className="font-bold text-stone-700">{dia}</span>
+                {hora && (
+                  <span className="text-xs bg-[#8CAB91]/20 text-[#5A7A60] px-2 py-0.5 rounded font-mono font-bold">
+                    {hora}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+    return <span>{String(dias)}</span>;
+  };
+  // ------------------------------------------------
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        {/* Cabeçalho */}
         <div className="relative bg-stone-100 p-6 flex flex-col items-center border-b border-stone-200">
           <button
             onClick={onClose}
@@ -57,11 +103,21 @@ export default function ModalDetalhesAluno({
             {student.nome}
           </h2>
           <span className="text-sm font-mono text-stone-500 bg-white px-3 py-1 rounded-full border border-stone-200 mt-2 shadow-sm">
-            {student.turma}
+            {student.turma || "Sem Turma"}
           </span>
         </div>
 
+        {/* Conteúdo */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* SEÇÃO NOVA: CRONOGRAMA */}
+          <div>
+            <h3 className="text-xs font-bold text-[#8CAB91] uppercase tracking-widest mb-3 border-b border-stone-100 pb-1">
+              Cronograma Semanal
+            </h3>
+            {renderCronograma()}
+          </div>
+
+          {/* Dados Pessoais */}
           <div>
             <h3 className="text-xs font-bold text-[#8CAB91] uppercase tracking-widest mb-3 border-b border-stone-100 pb-1">
               Dados Pessoais
@@ -104,7 +160,7 @@ export default function ModalDetalhesAluno({
             </div>
           </div>
 
-          {/* Seção 2: Financeiro */}
+          {/* Financeiro */}
           <div>
             <h3 className="text-xs font-bold text-[#8CAB91] uppercase tracking-widest mb-3 border-b border-stone-100 pb-1">
               Financeiro
@@ -144,30 +200,16 @@ export default function ModalDetalhesAluno({
           </div>
         </div>
 
-        <div className="p-4 bg-stone-50 border-t border-stone-100 flex justify-between items-center">
-          {/* Botão de Documento à Esquerda */}
+        {/* Rodapé */}
+        <div className="p-4 bg-stone-50 border-t border-stone-100 flex justify-between items-center gap-2">
           <button
             onClick={onGenerateDoc}
-            className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition text-sm font-medium flex items-center gap-2 border border-blue-100"
+            className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition text-sm font-medium flex items-center gap-2 border border-blue-100 whitespace-nowrap"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
             Gerar Contrato
           </button>
 
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             <button
               onClick={onClose}
               className="px-4 py-2 text-stone-500 hover:text-stone-700 hover:bg-stone-200 rounded-lg transition text-sm font-medium"
@@ -180,17 +222,16 @@ export default function ModalDetalhesAluno({
                   onConfirmPayment(student);
                   onClose();
                 }}
-                className="px-6 py-2 bg-[#8CAB91] text-white hover:bg-[#7A9B7F] rounded-lg shadow-sm hover:shadow-md transition flex items-center gap-2 font-medium"
+                className="px-4 py-2 bg-[#8CAB91] text-white hover:bg-[#7A9B7F] rounded-lg shadow-sm hover:shadow-md transition text-sm font-medium whitespace-nowrap"
               >
-                Marcar como Pago
+                Marcar Pago
               </button>
             )}
             <button
               onClick={onEdit}
-              className="px-6 py-2 bg-[#8CAB91] text-white hover:bg-[#7A9B7F] rounded-lg shadow-sm hover:shadow-md transition flex items-center gap-2 font-medium"
+              className="px-4 py-2 bg-stone-800 text-white hover:bg-black rounded-lg shadow-sm hover:shadow-md transition text-sm font-medium flex items-center gap-2 whitespace-nowrap"
             >
-              {/* Icone Edit */}
-              Editar Dados
+              Editar
             </button>
           </div>
         </div>
